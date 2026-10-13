@@ -1,0 +1,111 @@
+\documentclass[10pt,twocolumn]{article}
+\usepackage[margin=0.6in,top=0.5in,bottom=0.5in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{mathpazo}
+\usepackage{microtype}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titlespacing*{\section}{0pt}{6pt}{2pt}
+
+\title{\textbf{Analytical Foundations of the Lilium Mathematical Synthesis Engine}}
+\author{Procedural Botanical Model Specification $\cdot$ Project Lilium}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Coordinate Domain and Camera Projection}
+Let the discrete image domain be $\Omega = \{0, \dots, W-1\} \times \{0, \dots, H-1\}$ with $W=2400, H=1440$.
+Normalized screen coordinates are defined by:
+\begin{equation}
+u = \frac{x + \frac{1}{2}}{W}, \quad v = \frac{y + \frac{1}{2}}{H}.
+\end{equation}
+Ray direction through pixel $(u, v)$ with field of view $\theta_{\mathrm{fov}} = 36^\circ$ is given by:
+\begin{equation}
+\mathbf{r}(u, v) = \frac{\mathbf{d}_0 + (2u - 1)\tan\frac{\theta}{2}\mathbf{u}_r + (1 - 2v)\tan\frac{\theta}{2}\mathbf{u}_{up}}{\|\mathbf{d}_0 + (2u - 1)\tan\frac{\theta}{2}\mathbf{u}_r + (1 - 2v)\tan\frac{\theta}{2}\mathbf{u}_{up}\|}.
+\end{equation}
+
+\section{Parametric Tepal Manifold $\mathbf{S}_{j,k}$}
+Each tepal $k \in \{0, \dots, 5\}$ of flower $j$ is parametrized over $(s, t) \in [0, 1] \times [-1, 1]$:
+\begin{equation}
+\mathbf{S}_{j,k}(s, t) = \mathbf{p}_{j,k}(s) + t\,w_k(s)\,\mathbf{B}_{j,k}(s) + c_k(s, t)\,\mathbf{N}_{j,k}(s),
+\end{equation}
+with centerline spine trajectory $\mathbf{p}_{j,k}(s)$:
+\begin{equation}
+\mathbf{p}_{j,k}(s) = \mathbf{c}_j + \mathbf{R}_j \begin{bmatrix}
+r_k(s) \cos\psi_{j,k} \\
+r_k(s) \sin\psi_{j,k} \\
+0.32 L s - h_{\mathrm{refl}}\max(0, s - 0.38)^{1.85} + z_{\mathrm{curl}} s^2
+\end{bmatrix},
+\end{equation}
+where $r_k(s) = L_k (0.06 s + 0.78 s^{1.45})$ and $\mathbf{R}_j \in \mathrm{SO}(3)$ aligns flower facing.
+
+\section{Canonical Width Function $w(s)$}
+The width distribution satisfies Dirichlet boundary conditions $w(0) = w(1) = 0$:
+\begin{equation}
+w(s) = C_w s^\alpha (1 - s)^\beta \left[ 1 + \gamma_1 \sin(\pi s) + \gamma_2 \sin(2\pi s + \phi) \right],
+\end{equation}
+with parameters $\alpha = 1.20, \beta = 0.88, \gamma_1 = 0.35, \gamma_2 = -0.12$.
+
+\section{Trimerous Perianth Configuration}
+The 6 tepals form two alternating concentric whorls:
+\begin{equation}
+\psi_{j,k} = \begin{cases}
+\psi_{j,0} + \frac{2\pi k}{3} + \delta_{j,k}, & k \in \{0, 1, 2\} \text{ (Inner Petals)}, \\
+\psi_{j,0} + \frac{\pi}{3} + \frac{2\pi(k-3)}{3} + \delta_{j,k}, & k \in \{3, 4, 5\} \text{ (Outer Sepals)}.
+\end{cases}
+\end{equation}
+
+\section{Transverse Curvature and Margins}
+The elevation function $c(s, t)$ governs the central groove and undulating ruffles:
+\begin{equation}
+c(s, t) = -\delta_{\mathrm{groove}} e^{-26 t^2}(1 - 0.45s) + \delta_{\mathrm{arch}} s(1 - t^2) + A_{\mathrm{ruf}} s^{1.4} t^2 \sin(2\pi\omega s + \phi).
+\end{equation}
+
+\section{Vein and Papillae Fields}
+Branching longitudinal veins and raised papillae evaluate:
+\begin{equation}
+V(s, t) = 1 + \sum_{k=1}^K a_k \exp\left(-\frac{(|t| - \tau_k(s))^2}{2\sigma_k^2}\right),
+\end{equation}
+\begin{equation}
+\Pi(s, t) = \mathbb{I}_{[0.12, 0.38]}(s) \sin^+(42s) \cos^+(34t) (0.38 - s).
+\end{equation}
+
+\section{Androecium and Gynoecium}
+Versatile anthers are modeled as prolate ellipsoids:
+\begin{equation}
+\mathcal{E}_k = \left\{ \mathbf{x} \in \mathbb{R}^3 : \frac{(\mathbf{x} - \mathbf{q}_k)_1^2}{a^2} + \frac{(\mathbf{x} - \mathbf{q}_k)_2^2}{b^2} + \frac{(\mathbf{x} - \mathbf{q}_k)_3^2}{c^2} \le 1 \right\},
+\end{equation}
+coated in pollen grains with golden-amber radiance $\mathbf{C}_{\mathrm{pollen}} = [0.88, 0.48, 0.06]^T$.
+
+\section{Foliage and Bézier Stems}
+Stems are cubic Bézier spatial curves:
+\begin{equation}
+\mathbf{B}(u) = (1-u)^3 \mathbf{P}_0 + 3(1-u)^2 u \mathbf{P}_1 + 3(1-u) u^2 \mathbf{P}_2 + u^3 \mathbf{P}_3.
+\end{equation}
+Lanceolate leaves droop under gravitational load:
+\begin{equation}
+\mathbf{p}_{\mathrm{leaf}}(s) = \mathbf{p}_{\mathrm{att}} + s L \mathbf{d} - \frac{g}{2} s^2 \hat{\mathbf{z}} + w_{\mathrm{leaf}}(s) t \mathbf{B}_{\mathrm{leaf}}.
+\end{equation}
+
+\section{PBR Shading and Subsurface Transmission}
+Surface radiance evaluates:
+\begin{equation}
+I(\mathbf{x}) = k_a I_a \mathbf{c}_{\mathrm{base}} + \sum_{\ell=1}^3 I_\ell \left[
+\mathbf{c}_{\mathrm{alb}} \max(0, \mathbf{n}\cdot\boldsymbol{\omega}_\ell) +
+k_{\mathrm{spec}}(\mathbf{n}\cdot\mathbf{h}_\ell)^{\alpha} +
+k_{\mathrm{sub}}\mathbf{c}_{\mathrm{trans}}\max(0, -\mathbf{n}\cdot\boldsymbol{\omega}_\ell)
+\right] + \mathbf{I}_{\mathrm{rim}}.
+\end{equation}
+
+\section{Discrete Projection and Tone Mapping}
+Pixel color emerges from Z-buffer minimization and ACES-Reinhard filmic tone mapping:
+\begin{equation}
+z^*(u, v) = \min_m \{ z : \mathbf{r}(u, v) \cap \mathcal{M}_m \ne \emptyset \},
+\end{equation}
+\begin{equation}
+\mathbf{F}_\theta(u, v) = \left( \frac{1.35 I(1 + 1.35 I / L_{\mathrm{white}}^2)}{1 + 1.35 I} \right)^{1 / 2.2}.
+\end{equation}
+
+\end{document}
