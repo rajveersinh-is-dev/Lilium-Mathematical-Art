@@ -1,0 +1,8 @@
+numpy>=2.0.0
+scipy>=1.14.0
+pillow>=10.0.0
+numba>=0.60.0
+typst>=0.11.0
+pymupdf>=1.24.0
+matplotlib>=3.9.0
+pytest>=8.0.0
