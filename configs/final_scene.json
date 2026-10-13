@@ -1,0 +1,49 @@
+{
+  "scene_title": "Project Lilium — Mathematical Reconstruction of White Lilies",
+  "resolution": {
+    "width": 2400,
+    "height": 1440,
+    "master_canvas_size": 2400,
+    "caption_height": 80,
+    "equation_panel_height": 880
+  },
+  "random_seed": 2026,
+  "camera": {
+    "position": [0.0, 0.20, 4.35],
+    "target": [0.0, 0.12, 0.0],
+    "fov_degrees": 36.0
+  },
+  "lighting": {
+    "key_light": {
+      "direction": [-0.42, 0.65, 0.63],
+      "color": [1.0, 0.99, 0.96],
+      "intensity": 1.25
+    },
+    "fill_light": {
+      "direction": [0.55, 0.38, 0.74],
+      "color": [0.88, 0.94, 1.0],
+      "intensity": 0.55
+    },
+    "rim_light": {
+      "direction": [0.20, 0.72, -0.66],
+      "color": [0.96, 0.98, 0.92],
+      "intensity": 0.45
+    },
+    "ambient_radiance": [0.15, 0.17, 0.15]
+  },
+  "perianth_model": {
+    "tepals_per_flower": 6,
+    "whorls": 2,
+    "inner_width_ratio": 0.52,
+    "outer_width_ratio": 0.42,
+    "throat_depth_ratio": 0.38,
+    "reflex_ratio": 0.36,
+    "beta_alpha": 0.52,
+    "beta_beta": 0.88,
+    "harmonic_gamma1": 0.35,
+    "harmonic_gamma2": -0.15
+  },
+  "num_flowers_and_buds": 10,
+  "num_stems": 10,
+  "num_lanceolate_leaves": 48
+}
