@@ -193,7 +193,7 @@ Stems follow cubic Bézier spatial curves with continuous Bishop parallel transp
 \mathbf{B}(u) = (1-u)^3 \mathbf{P}_0 + 3(1-u)^2 u \mathbf{P}_1 + 3(1-u) u^2 \mathbf{P}_2 + u^3 \mathbf{P}_3
 ```
 
-The bouquet incorporates 56 multi-tiered lanceolate leaves organized into stem-borne foliage, mid-canopy cradling leaves, and outer cascading leaves. Rather than planar fins, each leaf is an organic 3D parametric 2-manifold governed by gravitational catenary droop, lateral S-curvature, axial torsion, sunken midrib groove (*sulcus*), transverse camber, and parallel monocot venation:
+The bouquet incorporates 50 multi-tiered lanceolate leaves organized into background backdrop foliage, side-cradling foliage, cascading collar leaves, and stem-borne leaves, alongside succulent calyx receptacles bridging each bloom to its pedicel. Verified collision detection guarantees zero leaf-petal penetrations. Rather than planar fins, each leaf is an organic 3D parametric 2-manifold governed by gravitational catenary droop, lateral S-curvature, axial torsion, sunken midrib groove (*sulcus*), transverse camber, and parallel monocot venation:
 
 ```math
 \mathbf{p}_{\mathrm{leaf}}(s, t) = \mathbf{p}_{\mathrm{midrib}}(s) + t\,w_{\mathrm{leaf}}(s)\,\mathbf{B}_{\mathrm{leaf}}(s) + c_{\mathrm{leaf}}(s, t)\,\mathbf{N}_{\mathrm{leaf}}(s)
