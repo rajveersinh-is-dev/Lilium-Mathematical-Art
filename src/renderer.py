@@ -585,24 +585,60 @@ def shade_scene_numba(
                 g_alb = max(0.0, min(1.0, g_alb + stem_fib))
                 roughness = 0.30; spec_k = 0.24; trans_k = 0.12
                 
-            elif m_id == 7:  # Leaf
-                r_alb = 0.020; g_alb = 0.078; b_alb = 0.018
-                mid_l = np.exp(-36.0 * (t * t))
-                r_alb = r_alb * (1.0 - mid_l) + 0.088 * mid_l
-                g_alb = g_alb * (1.0 - mid_l) + 0.205 * mid_l
-                b_alb = b_alb * (1.0 - mid_l) + 0.052 * mid_l
-                leaf_vein = 0.004 * np.sin(120.0 * t)
-                g_alb = max(0.0, min(1.0, g_alb + leaf_vein))
-                nx += 0.035 * np.cos(120.0 * t)
-                if abs_t > 0.85:
-                    edge_w = (abs_t - 0.85) / 0.15
-                    g_alb = min(1.0, g_alb + 0.03 * edge_w)
-                    trans_k = 0.22 * edge_w
+            elif m_id == 7:  # Realistic Botanical Leaf
+                # Base lamina: deep, vibrant botanical emerald/forest green
+                r_alb = 0.026; g_alb = 0.118; b_alb = 0.028
+                
+                # Central longitudinal midrib vein (prominent spring-green canal)
+                mid_l = np.exp(-32.0 * (t * t))
+                r_alb = r_alb * (1.0 - mid_l) + 0.082 * mid_l
+                g_alb = g_alb * (1.0 - mid_l) + 0.235 * mid_l
+                b_alb = b_alb * (1.0 - mid_l) + 0.058 * mid_l
+                
+                # Secondary Monocot Parallel Veins: 5 vein bundles across the blade
+                # Veins at |t| ≈ 0.20, 0.40, 0.60, 0.78, 0.92
+                v1 = np.exp(-180.0 * ((abs_t - 0.20) ** 2))
+                v2 = np.exp(-180.0 * ((abs_t - 0.40) ** 2))
+                v3 = np.exp(-180.0 * ((abs_t - 0.60) ** 2))
+                v4 = np.exp(-180.0 * ((abs_t - 0.78) ** 2))
+                v5 = np.exp(-180.0 * ((abs_t - 0.92) ** 2))
+                sec_veins = (v1 + v2 + v3 + v4 + v5) * 0.016
+                g_alb = min(1.0, g_alb + sec_veins)
+                r_alb = min(1.0, r_alb + 0.35 * sec_veins)
+                
+                # Fine cellular parallel striations
+                striation = 0.006 * np.sin(160.0 * t) * (1.0 - 0.3 * s)
+                g_alb = max(0.0, min(1.0, g_alb + striation))
+                
+                # Normal Perturbation:
+                # 1. Midrib keel depression / ridge
+                nx -= 0.16 * t * np.exp(-28.0 * (t * t))
+                # 2. Secondary parallel vein ridges
+                nx += 0.045 * np.cos(160.0 * t) * (1.0 - 0.35 * s)
+                # 3. Longitudinal waxy cuticle micro-grain
+                ny += 0.020 * np.sin(240.0 * s + 30.0 * t)
+                
+                # Translucent leaf margins & tip (forward chlorophyll scattering)
+                if abs_t > 0.78:
+                    edge_w = (abs_t - 0.78) / 0.22
+                    g_alb = min(1.0, g_alb + 0.045 * edge_w)
+                    r_alb = min(1.0, r_alb + 0.018 * edge_w)
+                    trans_k = 0.14 + 0.26 * edge_w
                 else:
-                    trans_k = 0.08
+                    trans_k = 0.10 + 0.06 * (s ** 2)
+                    
+                # Acuminated tip color modulation
+                if s > 0.85:
+                    tip_w = (s - 0.85) / 0.15
+                    g_alb = min(1.0, g_alb + 0.025 * tip_w)
+                    trans_k = min(0.40, trans_k + 0.12 * tip_w)
+                
                 n_len = max(1e-6, (nx*nx + ny*ny + nz*nz)**0.5)
                 nx /= n_len; ny /= n_len; nz /= n_len
-                roughness = 0.16; spec_k = 0.46
+                
+                # Waxy cuticle specular reflectance
+                roughness = 0.18 * (1.0 - mid_l) + 0.28 * mid_l
+                spec_k = 0.52
                 
             # Depth and contact ambient occlusion
             depth_val = z_buffer[py, px]

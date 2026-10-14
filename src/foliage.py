@@ -20,16 +20,22 @@ from src.geometry import (
 
 
 class LilyLeaf:
-    """Parametric lanceolate lily leaf with parabolic cross-section, gravity droop, and axial twist."""
+    """
+    Parametric lanceolate lily leaf with organic botanical sigmoid curvature,
+    gravitational sag, axial twist, sunken midrib canal, transverse camber,
+    and delicate margin undulations.
+    """
     def __init__(
         self,
         attach_point: np.ndarray,
         direction: np.ndarray,
         length: float,
         max_width: float,
-        droop: float = 0.25,
+        droop: float = 0.32,
         curl: float = 0.05,
         twist: float = 0.0,
+        arch: float = 0.16,
+        wave: float = 0.022,
         seed: int = 100
     ):
         self.attach = np.asarray(attach_point, dtype=np.float64).reshape(3)
@@ -39,58 +45,84 @@ class LilyLeaf:
         self.droop = droop
         self.curl = curl
         self.twist = twist
+        self.arch = arch
+        self.wave = wave
         self.seed = seed
 
     def generate_mesh(
         self,
-        n_s: int = 28,
-        n_t: int = 13
+        n_s: int = 42,
+        n_t: int = 17
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Generates 3D vertices, faces, normals, and UVs for the leaf.
+        Generates 3D vertices, faces, normals, and UVs for the realistic leaf.
         """
+        rng = np.random.RandomState(self.seed)
         s_vals = np.linspace(0.0, 1.0, n_s)
         t_vals = np.linspace(-1.0, 1.0, n_t)
         S, T = np.meshgrid(s_vals, t_vals, indexing='ij')
         
-        # Up vector for leaf
-        up_ref = np.array([0.0, 0.0, 1.0])
-        binormal = normalize(np.cross(self.dir, up_ref))
-        if np.linalg.norm(binormal) < 1e-4:
-            binormal = np.array([1.0, 0.0, 0.0])
+        # World Up vector is +Y
+        world_up = np.array([0.0, 1.0, 0.0])
+        # Binormal across the leaf blade (horizontal transverse vector)
+        binormal = np.cross(self.dir, world_up)
+        b_norm = np.linalg.norm(binormal)
+        if b_norm < 1e-4:
+            binormal = np.cross(self.dir, np.array([1.0, 0.0, 0.0]))
+            b_norm = np.linalg.norm(binormal)
+        binormal = binormal / max(1e-6, b_norm)
+        
+        # Surface normal (perpendicular to blade facing generally upward)
         normal = normalize(np.cross(binormal, self.dir))
         
-        # Midrib spine with gravity droop
-        # p(s) = attach + s * L * dir - droop * s^2 * normal + curl * s^3 * binormal
+        # 1. Botanical Sigmoid Midrib Spine Trajectory:
+        # Arch rises in the first 35% of length, then gravity droop takes over smoothly
+        arch_profile = self.arch * np.sin(np.pi * (s_vals ** 0.80))
+        droop_profile = self.droop * (s_vals ** 2.0) + 0.25 * self.droop * (np.maximum(0.0, s_vals - 0.60) ** 2.4)
+        curl_profile = self.curl * (s_vals ** 1.8 - 0.35 * (s_vals ** 2.4))
+        
         spine_pts = (
             self.attach[None, :]
             + (s_vals[:, None] * self.length) * self.dir[None, :]
-            - (self.droop * (s_vals[:, None] ** 2) * self.length) * normal[None, :]
-            + (self.curl * (s_vals[:, None] ** 3) * self.length) * binormal[None, :]
+            + (self.length * arch_profile[:, None]) * normal[None, :]
+            - (self.length * droop_profile[:, None]) * world_up[None, :]
+            + (self.length * curl_profile[:, None]) * binormal[None, :]
         )  # (n_s, 3)
         
-        # Lanceolate width profile: w(s) = W_max * s^0.55 * (1 - s)^1.15
+        # 2. Lanceolate Width Profile:
+        # Peak width at s ≈ 0.36, tapering smoothly to acute apex at s = 1.0
         s_clamped = np.clip(s_vals, 0.0, 1.0)
-        s_peak = 0.55 / (0.55 + 1.15)
-        norm_factor = 1.0 / ((s_peak ** 0.55) * ((1.0 - s_peak) ** 1.15))
-        w_profile = self.max_width * norm_factor * (s_clamped ** 0.55) * ((1.0 - s_clamped) ** 1.15)
+        alpha, beta = 0.65, 1.15
+        s_peak = alpha / (alpha + beta)
+        norm_factor = 1.0 / ((s_peak ** alpha) * ((1.0 - s_peak) ** beta))
+        w_profile = self.max_width * norm_factor * (s_clamped ** alpha) * ((1.0 - s_clamped) ** beta)
         
+        # Transverse width offset
         W = w_profile[:, None] * T  # (n_s, n_t)
         
-        # Axial twist as leaf arches outward
-        twist_ang = self.twist * (s_vals ** 1.8)
+        # 3. Axial Helical Torsion (Twisting leaf blade):
+        # Leaf twists smoothly around its midrib as it arches outwards
+        twist_ang = self.twist * (s_vals ** 1.5) + 0.06 * np.sin(np.pi * s_vals)
         cos_tw = np.cos(twist_ang)[:, None]
         sin_tw = np.sin(twist_ang)[:, None]
         binormal_tw = cos_tw * binormal[None, :] + sin_tw * normal[None, :]
         normal_tw = -sin_tw * binormal[None, :] + cos_tw * normal[None, :]
         
-        # V-shaped cross section: fold elevation along midrib
-        # Center t=0 is lowest, edges are slightly raised
-        v_fold = 0.035 * self.max_width * (T ** 2)
+        # 4. Botanical 3D Cross-Section Architecture:
+        # - Sunken central midrib canal (ventral sulcus) along t=0
+        # - Transverse convex camber of the leaf lamina
+        # - Delicate sinusoidal edge ruffles (margin wave)
+        phi_wave = rng.uniform(0.0, 2.0 * np.pi)
+        midrib_groove = -0.045 * self.max_width * np.exp(-24.0 * (T ** 2)) * (1.0 - 0.30 * S)
+        transverse_camber = 0.08 * self.max_width * (1.0 - 0.45 * S) * (np.abs(T) - (T ** 2))
+        margin_waves = self.wave * self.length * (S ** 1.3) * (np.abs(T) ** 1.8) * np.sin(10.0 * S + phi_wave)
         
-        vx = spine_pts[:, 0, None] + W * binormal_tw[:, 0, None] + v_fold * normal_tw[:, 0, None]
-        vy = spine_pts[:, 1, None] + W * binormal_tw[:, 1, None] + v_fold * normal_tw[:, 1, None]
-        vz = spine_pts[:, 2, None] + W * binormal_tw[:, 2, None] + v_fold * normal_tw[:, 2, None]
+        cross_elevation = midrib_groove + transverse_camber + margin_waves
+        
+        # Combine midrib spine, transverse width, and cross-section elevation
+        vx = spine_pts[:, 0, None] + W * binormal_tw[:, 0, None] + cross_elevation * normal_tw[:, 0, None]
+        vy = spine_pts[:, 1, None] + W * binormal_tw[:, 1, None] + cross_elevation * normal_tw[:, 1, None]
+        vz = spine_pts[:, 2, None] + W * binormal_tw[:, 2, None] + cross_elevation * normal_tw[:, 2, None]
         
         vertices = np.stack([vx, vy, vz], axis=-1).reshape(-1, 3)
         uvs = np.stack([S, T], axis=-1).reshape(-1, 2)
@@ -314,43 +346,77 @@ class BouquetScene:
                 
                 # Leaf angles outwards around stem
                 phi_leaf = self.rng.uniform(0, 2.0 * np.pi)
-                ortho_stem = np.array([np.cos(phi_leaf), np.sin(phi_leaf), 0.20])
-                leaf_dir = normalize(ortho_stem + 0.35 * T_stem)
+                ortho_stem = np.array([np.cos(phi_leaf), 0.15 + 0.10 * np.sin(phi_leaf), np.sin(phi_leaf)])
+                leaf_dir = normalize(ortho_stem + 0.30 * T_stem)
                 
                 leaf = LilyLeaf(
                     attach_point=leaf_attach,
                     direction=leaf_dir,
-                    length=self.rng.uniform(0.85, 1.25),
-                    max_width=self.rng.uniform(0.16, 0.22),
-                    droop=self.rng.uniform(0.22, 0.36),
-                    curl=self.rng.uniform(-0.06, 0.06),
+                    length=self.rng.uniform(0.95, 1.45),
+                    max_width=self.rng.uniform(0.18, 0.25),
+                    droop=self.rng.uniform(0.28, 0.48),
+                    curl=self.rng.uniform(-0.10, 0.10),
+                    twist=self.rng.uniform(-0.35, 0.35),
+                    arch=self.rng.uniform(0.12, 0.22),
+                    wave=self.rng.uniform(0.015, 0.030),
                     seed=int(self.rng.randint(1000, 99999))
                 )
                 self.leaves.append(leaf)
                 
-        # 16 Prominent Framing Collar Leaves radiating around the bouquet perimeter
-        for k in range(16):
-            ang_collar = k * (2.0 * np.pi / 16.0) + self.rng.uniform(-0.10, 0.10)
+        # Multi-tiered botanical collar leaves framing the bouquet perimeter
+        # Tier 1: Outer perimeter broad sweeping leaves (14 leaves)
+        for k in range(14):
+            ang_collar = k * (2.0 * np.pi / 14.0) + self.rng.uniform(-0.12, 0.12)
             attach_collar = bouquet_base + np.array([
-                0.28 * np.cos(ang_collar),
-                0.40 + self.rng.uniform(-0.1, 0.1),
-                0.28 * np.sin(ang_collar)
+                0.32 * np.cos(ang_collar),
+                0.35 + self.rng.uniform(-0.10, 0.10),
+                0.32 * np.sin(ang_collar)
             ])
             dir_collar = normalize(np.array([
                 np.cos(ang_collar),
-                -0.12 + 0.30 * np.sin(ang_collar),
-                0.32 + 0.25 * np.cos(ang_collar)
+                -0.18 + 0.25 * np.sin(ang_collar),
+                0.35 + 0.25 * np.cos(ang_collar)
             ]))
             collar_leaf = LilyLeaf(
                 attach_point=attach_collar,
                 direction=dir_collar,
-                length=self.rng.uniform(1.25, 1.75),
-                max_width=self.rng.uniform(0.22, 0.30),
-                droop=self.rng.uniform(0.28, 0.42),
-                curl=self.rng.uniform(-0.08, 0.08),
+                length=self.rng.uniform(1.65, 2.25),
+                max_width=self.rng.uniform(0.26, 0.36),
+                droop=self.rng.uniform(0.40, 0.65),
+                curl=self.rng.uniform(-0.12, 0.12),
+                twist=self.rng.uniform(-0.45, 0.45),
+                arch=self.rng.uniform(0.18, 0.28),
+                wave=self.rng.uniform(0.020, 0.038),
                 seed=int(self.rng.randint(10000, 99999))
             )
             self.leaves.append(collar_leaf)
+
+        # Tier 2: Mid-canopy outward leaves cradling the blooms (10 leaves)
+        for k in range(10):
+            ang_mid = k * (2.0 * np.pi / 10.0) + self.rng.uniform(-0.15, 0.15)
+            attach_mid = bouquet_base + np.array([
+                0.22 * np.cos(ang_mid),
+                0.75 + self.rng.uniform(-0.10, 0.10),
+                0.22 * np.sin(ang_mid)
+            ])
+            dir_mid = normalize(np.array([
+                np.cos(ang_mid),
+                0.10 + 0.25 * np.sin(ang_mid),
+                0.40 + 0.20 * np.cos(ang_mid)
+            ]))
+            mid_leaf = LilyLeaf(
+                attach_point=attach_mid,
+                direction=dir_mid,
+                length=self.rng.uniform(1.25, 1.70),
+                max_width=self.rng.uniform(0.22, 0.30),
+                droop=self.rng.uniform(0.30, 0.45),
+                curl=self.rng.uniform(-0.10, 0.10),
+                twist=self.rng.uniform(-0.35, 0.35),
+                arch=self.rng.uniform(0.15, 0.24),
+                wave=self.rng.uniform(0.018, 0.032),
+                seed=int(self.rng.randint(50000, 99999))
+            )
+            self.leaves.append(mid_leaf)
 
     def generate_bouquet_geometry(self) -> Dict[str, Any]:
         """
@@ -403,7 +469,7 @@ class BouquetScene:
             
         # 3. Generate Leaves
         for leaf in self.leaves:
-            l_verts, l_faces, l_normals, l_uvs = leaf.generate_mesh(n_s=36, n_t=15)
+            l_verts, l_faces, l_normals, l_uvs = leaf.generate_mesh(n_s=44, n_t=17)
             all_verts.append(l_verts)
             all_faces.append(l_faces + vert_offset)
             all_normals.append(l_normals)
