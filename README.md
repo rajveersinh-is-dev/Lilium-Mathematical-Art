@@ -95,23 +95,23 @@ Every visual attribute in the artwork is evaluated directly from continuous anal
 
 For pixel column $m \in \{1, \dots, 2400\}$ and row $n \in \{1, \dots, 1440\}$:
 
-$$
+```math
 \mathbf{rgb}\left(\mathcal{F}\left(\mathbf{H}_0\left(\frac{m-1200}{1200}, \frac{721-n}{720}\right)\right), \mathcal{F}\left(\mathbf{H}_1\left(\frac{m-1200}{1200}, \frac{721-n}{720}\right)\right), \mathcal{F}\left(\mathbf{H}_2\left(\frac{m-1200}{1200}, \frac{721-n}{720}\right)\right)\right)
-$$
+```
 
 where the color-channel activation operator $\mathcal{F}(x)$ is bounded in $[0, 255]$:
 
-$$
+```math
 \mathcal{F}(x) = \left\lfloor 255 \cdot \min\left(1, \max\left(0, x\right)\right) \right\rfloor
-$$
+```
 
 ### 2. Multi-Flower Scene Ray-Casting & Depth Composition
 
 The complete bouquet $\mathbf{H}_v(x, y)$ evaluates the optical contribution across $N=10$ flowers with depth-ordered occlusion:
 
-$$
+```math
 \mathbf{H}_v(x, y) = \sum_{j=1}^{10} \left( \prod_{r=1}^{j-1} \left[ 1 - \mathcal{A}_{1000, r}(x, y) \right] \right) \left( 1 - e^{-1000\left(r - \frac{1}{2}\right)} \mathcal{U}_r(x, y) \right) \mathbf{L}_{v, j}(x, y) + \mathbf{B}_v(x, y)
-$$
+```
 
 where $\mathcal{A}_{\kappa, j}(x, y) = \frac{1}{1 + e^{-\kappa(z_{\mathrm{cam}} - z_j(x, y))}}$ is the soft Z-buffer visibility operator and $\mathbf{B}_v(x, y)$ represents the chiaroscuro forest background gradient.
 
@@ -119,17 +119,17 @@ where $\mathcal{A}_{\kappa, j}(x, y) = \frac{1}{1 + e^{-\kappa(z_{\mathrm{cam}} 
 
 Each tepal $k \in \{0, \dots, 5\}$ of flower $j \in \{1, \dots, 10\}$ is an embedded 2-manifold in $\mathbb{R}^3$ parameterized over $(s, t) \in [0, 1] \times [-1, 1]$:
 
-$$
+```math
 \mathbf{S}_{j,k}(s, t) = \mathbf{p}_{j,k}(s) + t\,w_k(s)\,\mathbf{B}_{j,k}(s) + c_k(s, t)\,\mathbf{N}_{j,k}(s)
-$$
+```
 
 where $\mathbf{p}_{j,k}(s)$ is the 3D perianth midrib spine, $\mathbf{B}_{j,k}(s)$ is the binormal curve vector, and $\mathbf{N}_{j,k}(s)$ is the surface normal.
 
 The spine follows an organic recurvature trajectory:
 
-$$
+```math
 \mathbf{p}_{j,k}(s) = \mathbf{c}_j + \mathbf{R}_j \begin{bmatrix} r_k(s) \cos\psi_{j,k} \\ r_k(s) \sin\psi_{j,k} \\ 0.32 L s - h_{\mathrm{refl}}\max(0, s - 0.38)^{1.85} + z_{\mathrm{curl}} s^2 \end{bmatrix}
-$$
+```
 
 with radial extension $r_k(s) = L_k (0.06 s + 0.78 s^{1.45})$ and rotation matrix $\mathbf{R}_j \in \mathrm{SO}(3)$ determining the flower's 3D orientation.
 
@@ -137,9 +137,9 @@ with radial extension $r_k(s) = L_k (0.06 s + 0.78 s^{1.45})$ and rotation matri
 
 The transverse petal width satisfies Dirichlet boundary conditions $w(0) = w(1) = 0$ via a generalized beta-harmonic expansion:
 
-$$
+```math
 w_k(s) = C_w s^\alpha (1 - s)^\beta \left[ 1 + \gamma_1 \sin(\pi s) + \gamma_2 \sin(2\pi s + \phi) \right]
-$$
+```
 
 with $\alpha = 1.20$, $\beta = 0.88$, $\gamma_1 = 0.35$, $\gamma_2 = -0.12$. Peak petal width occurs at $s^* \approx 0.577$, modeling the slender claw (*unguis*) transitioning into an expansive elliptical blade.
 
@@ -147,9 +147,9 @@ with $\alpha = 1.20$, $\beta = 0.88$, $\gamma_1 = 0.35$, $\gamma_2 = -0.12$. Pea
 
 The 6 tepals are partitioned into two alternating concentric whorls separated by a phase offset of $\frac{\pi}{3}$:
 
-$$
+```math
 \psi_{j,k} = \begin{cases} \psi_{j,0} + \frac{2\pi k}{3} + \delta_{j,k}, & k \in \{0, 1, 2\} \quad \text{(Inner Petals)} \\ \psi_{j,0} + \frac{\pi}{3} + \frac{2\pi(k-3)}{3} + \delta_{j,k}, & k \in \{3, 4, 5\} \quad \text{(Outer Sepals)} \end{cases}
-$$
+```
 
 Inner petals have width factor $w_{\mathrm{inner}} = 0.22 L$, while outer sepals have $w_{\mathrm{outer}} = 0.16 L$ and sit slightly recessed ($\Delta z = -0.04 L$), creating natural botanical depth.
 
@@ -157,9 +157,9 @@ Inner petals have width factor $w_{\mathrm{inner}} = 0.22 L$, while outer sepals
 
 The elevation profile $c_k(s, t)$ governs the sunken central nectar furrow, transverse arching, and crenulated edge ruffles:
 
-$$
+```math
 c_k(s, t) = -\delta_{\mathrm{groove}} e^{-26 t^2}(1 - 0.45s) + \delta_{\mathrm{arch}} s (1 - t^2) + A_{\mathrm{ruf}} s^{1.4} t^2 \sin(2\pi\omega s + \phi)
-$$
+```
 
 where the first term forms the central groove, the second creates lateral convex camber, and the third produces delicate sinusoidal edge undulations.
 
@@ -167,21 +167,21 @@ where the first term forms the central groove, the second creates lateral convex
 
 Parallel longitudinal veins and raised nectar papillose glands near the throat evaluate:
 
-$$
+```math
 V(s, t) = 1 + \sum_{i=1}^4 a_i \exp\left(-\frac{(|t| - \tau_i(s))^2}{2\sigma_i^2}\right), \quad \tau_i(s) = 0.22 i (1 - 0.15s)
-$$
+```
 
-$$
+```math
 \Pi(s, t) = \mathbb{I}_{[0.12, 0.38]}(s) \cdot \sin^+(42 s) \cos^+(34 t) \cdot (0.38 - s)
-$$
+```
 
 ### 8. Androecium Prolate Ellipsoids & Gynoecium Pistil
 
 Each flower contains 6 versatile anthers modeled as prolate ellipsoids in $\mathbb{R}^3$:
 
-$$
+```math
 \mathcal{E}_k = \left\{ \mathbf{x} \in \mathbb{R}^3 : \frac{\left((\mathbf{x} - \mathbf{q}_k)\cdot\mathbf{e}_{1,k}\right)^2}{a^2} + \frac{\left((\mathbf{x} - \mathbf{q}_k)\cdot\mathbf{e}_{2,k}\right)^2}{b^2} + \frac{\left((\mathbf{x} - \mathbf{q}_k)\cdot\mathbf{e}_{3,k}\right)^2}{c^2} \le 1 \right\}
-$$
+```
 
 Each anther is coated in micro-textured pollen grains with radiant golden-amber reflectance $\mathbf{C}_{\mathrm{pollen}} = [0.88, 0.48, 0.06]^T$, surrounding a central tri-lobed stigmatic gynoecium head.
 
@@ -189,29 +189,29 @@ Each anther is coated in micro-textured pollen grains with radiant golden-amber 
 
 Stems follow cubic Bézier spatial curves with continuous Bishop parallel transport frames:
 
-$$
+```math
 \mathbf{B}(u) = (1-u)^3 \mathbf{P}_0 + 3(1-u)^2 u \mathbf{P}_1 + 3(1-u) u^2 \mathbf{P}_2 + u^3 \mathbf{P}_3
-$$
+```
 
 Drooping lanceolate leaves emerge along the stems under gravitational deflection:
 
-$$
+```math
 \mathbf{p}_{\mathrm{leaf}}(s) = \mathbf{p}_{\mathrm{att}} + s L \mathbf{d} - \frac{g}{2} s^2 \hat{\mathbf{z}} + w_{\mathrm{leaf}}(s) t \mathbf{B}_{\mathrm{leaf}}
-$$
+```
 
 ### 10. Multi-Lobe Microfacet Radiance & Film Tone Mapping
 
 Surface radiance combines diffuse Lambertian reflection, waxy cuticle specular sheen (GGX microfacet), forward subsurface translucency, and cavity ambient occlusion:
 
-$$
+```math
 I(\mathbf{x}) = k_a I_a \mathbf{c}_{\mathrm{base}} \mathrm{AO}(\mathbf{x}) + \sum_{\ell=1}^3 I_\ell \left[ \mathbf{c}_{\mathrm{alb}} \max(0, \mathbf{n}\cdot\boldsymbol{\omega}_\ell) + k_{\mathrm{spec}}(\mathbf{n}\cdot\mathbf{h}_\ell)^\alpha + k_{\mathrm{sub}}\mathbf{c}_{\mathrm{trans}}\max(0, -\mathbf{n}\cdot\boldsymbol{\omega}_\ell) \right] + \mathbf{I}_{\mathrm{rim}}
-$$
+```
 
 Tone mapping applies an ACES-Reinhard curve to ensure smooth highlight rolloff:
 
-$$
+```math
 \mathbf{F}_\theta(u, v) = \left( \frac{1.35 I(1 + 1.35 I / L_{\mathrm{white}}^2)}{1 + 1.35 I} \right)^{1 / 2.2}
-$$
+```
 
 ---
 
@@ -292,22 +292,22 @@ python -m pytest -v
 ```
 Output:
 ```text
-tests/test_geometry.py::test_dirichlet_boundary_conditions PASSED            [  6%]
-tests/test_geometry.py::test_bezier_endpoints_and_derivatives PASSED         [ 12%]
-tests/test_geometry.py::test_bishop_frame_orthonormality PASSED              [ 18%]
-tests/test_geometry.py::test_rodrigues_rotation PASSED                       [ 25%]
-tests/test_geometry.py::test_petal_normal_orientation PASSED                 [ 31%]
-tests/test_determinism.py::test_geometric_determinism PASSED                 [ 37%]
-tests/test_determinism.py::test_render_determinism PASSED                    [ 43%]
-tests/test_rendering.py::test_output_dimensions PASSED                       [ 50%]
-tests/test_rendering.py::test_depth_buffer_monotonicity PASSED               [ 56%]
-tests/test_rendering.py::test_material_ids_present PASSED                    [ 62%]
-tests/test_rendering.py::test_pixel_values_finite_and_bounded PASSED         [ 68%]
-tests/test_rendering.py::test_screen_projection_bounds PASSED                [ 75%]
+tests/test_geometry.py::test_dirichlet_boundary_conditions PASSED        [  6%]
+tests/test_geometry.py::test_bezier_endpoints_and_derivatives PASSED    [ 12%]
+tests/test_geometry.py::test_bishop_frame_orthonormality PASSED        [ 18%]
+tests/test_geometry.py::test_rodrigues_rotation PASSED                  [ 25%]
+tests/test_geometry.py::test_petal_normal_orientation PASSED           [ 31%]
+tests/test_determinism.py::test_geometric_determinism PASSED           [ 37%]
+tests/test_determinism.py::test_render_determinism PASSED              [ 43%]
+tests/test_rendering.py::test_output_dimensions PASSED                 [ 50%]
+tests/test_rendering.py::test_depth_buffer_monotonicity PASSED         [ 56%]
+tests/test_rendering.py::test_material_ids_present PASSED              [ 62%]
+tests/test_rendering.py::test_pixel_values_finite_and_bounded PASSED   [ 68%]
+tests/test_rendering.py::test_screen_projection_bounds PASSED          [ 75%]
 tests/test_equations.py::test_equation_panel_contains_required_models PASSED [ 81%]
-tests/test_equations.py::test_equation_symbols_consistent PASSED             [ 87%]
-tests/test_equations.py::test_typst_file_compiles PASSED                     [ 93%]
-tests/test_equations.py::test_latex_syntax_valid PASSED                      [100%]
+tests/test_equations.py::test_equation_symbols_consistent PASSED       [ 87%]
+tests/test_equations.py::test_typst_file_compiles PASSED               [ 93%]
+tests/test_equations.py::test_latex_syntax_valid PASSED                 [100%]
 
 ============================= 16 passed in 10.9s ==============================
 ```
