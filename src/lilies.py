@@ -227,7 +227,10 @@ class LilyTepal:
                 * (T ** 2)
                 * np.sin(2.0 * np.pi * self.ruffle_freq * S + self.phase)
             )
-            c_elev = throat_cup + midrib_camber + ventral_furrow + edge_ruffle
+            # Smoothly taper margin ruffles and camber to 0 at the acute apex tip (s=1)
+            # so all vertices across the width converge cleanly into a single sharp, organic pointed tip
+            apex_taper = (np.clip((1.0 - S) / 0.08, 0.0, 1.0) ** 0.75)
+            c_elev = (throat_cup + midrib_camber + ventral_furrow + edge_ruffle) * apex_taper
             
             spine_x = r_s * dir_x
             spine_y = r_s * dir_y
@@ -387,9 +390,9 @@ class LilyFlower:
         
         vert_offset = 0
         
-        # 1. Generate Tepals
+        # 1. Generate Tepals with high-density smooth curvature
         for tepal in self.tepals:
-            t_verts, t_faces, t_normals, t_uvs = tepal.generate_mesh(n_s=56, n_t=27)
+            t_verts, t_faces, t_normals, t_uvs = tepal.generate_mesh(n_s=92, n_t=44)
             world_verts = self.center + (self.rot_matrix @ t_verts.T).T
             world_normals = (self.rot_matrix @ t_normals.T).T
             

@@ -247,8 +247,8 @@ def generate_calyx_receptacle(
     scale: float
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Generates a succulent green calyx/receptacle tube connecting flower base to stem."""
-    n_slices = 8
-    n_steps = 6
+    n_slices = 16
+    n_steps = 10
     z_min = -0.15 * scale
     z_max = 0.01 * scale
     
@@ -765,7 +765,7 @@ class BouquetScene:
             
         # 2. Generate Stems
         for stem in self.stems:
-            s_verts, s_faces, s_normals, s_uvs = stem.generate_mesh(n_steps=24, n_radial=8)
+            s_verts, s_faces, s_normals, s_uvs = stem.generate_mesh(n_steps=32, n_radial=12)
             all_verts.append(s_verts)
             all_faces.append(s_faces + vert_offset)
             all_normals.append(s_normals)
@@ -775,7 +775,7 @@ class BouquetScene:
             
         # 3. Generate Leaves
         for leaf in self.leaves:
-            l_verts, l_faces, l_normals, l_uvs = leaf.generate_mesh(n_s=44, n_t=17)
+            l_verts, l_faces, l_normals, l_uvs = leaf.generate_mesh(n_s=56, n_t=22)
             all_verts.append(l_verts)
             all_faces.append(l_faces + vert_offset)
             all_normals.append(l_normals)
