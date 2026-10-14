@@ -144,14 +144,14 @@ class LilyTepal:
             z_cup = z_throat + 0.44 * self.length * np.sin(0.5 * np.pi * (s_vals ** 0.88))
             
             # Backward recurvature (reflexing):
-            # Inner petals reflex gently (~30°); outer sepals reflex gracefully (~70°) in a smooth sweep
+            # Inner petals reflex gracefully (~45°); outer sepals reflex dramatically (~75°) in a smooth sweep
             if self.is_inner:
-                refl_start = 0.58
-                refl_amount = 0.38 * self.reflex_amount
-                refl_power = 1.70
+                refl_start = 0.50
+                refl_amount = 0.65 * self.reflex_amount
+                refl_power = 1.65
             else:
-                refl_start = 0.44
-                refl_amount = 1.10 * self.reflex_amount
+                refl_start = 0.40
+                refl_amount = 1.15 * self.reflex_amount
                 refl_power = 1.55
                 
             z_refl = refl_amount * (np.maximum(0.0, (s_vals - refl_start) / (1.0 - refl_start)) ** refl_power)
@@ -182,34 +182,39 @@ class LilyTepal:
             binormals = normalize(b0 - proj * spine_tan, axis=-1)
             normals_spine = normalize(np.cross(spine_tan, binormals), axis=-1)
             
-            # 3. Voluptuous Obovate Width Profile:
-            # Narrow claw at base, expansive rounded midsection, soft acute tip
-            s_mid = np.clip(s_vals, 0.0, 1.0)
+            # 3. Botanical Stellate Perianth Width Profile:
+            # Elegant obovate/lanceolate blade with slender basal unguis and sharp acute apex
             if self.is_inner:
-                # Wide, voluptuous obovate inner petal: peaks at s ≈ 0.68-0.72
-                p_shape = (s_mid ** 1.35) * ((1.0 - s_mid) ** 0.55)
-                p_peak = (0.7105 ** 1.35) * (0.2895 ** 0.55)
+                w_profile = petal_width_profile(
+                    s_vals,
+                    scale=self.max_width,
+                    alpha=1.20,
+                    beta=0.90,
+                    gamma1=self.width_harmonic,
+                    gamma2=-0.10,
+                    phi=self.phase
+                )
             else:
-                # Slender, recurving elliptic outer sepal: peaks at s ≈ 0.62-0.65
-                p_shape = (s_mid ** 1.22) * ((1.0 - s_mid) ** 0.65)
-                p_peak = (0.6524 ** 1.22) * (0.3476 ** 0.65)
-                
-            blade_w = self.max_width * (p_shape / p_peak)
-            claw_w = 0.024 * self.length * (1.0 - s_mid ** 0.6)
-            tip_w = 0.016 * self.length * ((1.0 - s_mid) ** 0.8)
-            w_base = claw_w + blade_w + tip_w
+                w_profile = petal_width_profile(
+                    s_vals,
+                    scale=self.max_width,
+                    alpha=1.15,
+                    beta=1.05,
+                    gamma1=self.width_harmonic,
+                    gamma2=-0.10,
+                    phi=self.phase
+                )
             
-            # Romantic wavy margin undulation (gentle broad wave along outer blade)
-            ruffle_envelope = (s_vals ** 1.4) * (0.045 if self.is_inner else 0.022) * self.max_width
-            w_margin = ruffle_envelope * np.sin(2.0 * np.pi * self.ruffle_freq * s_vals + self.phase)
-            w_profile = np.maximum(0.008 * self.length * (1.0 - 0.7 * s_vals), w_base + w_margin)
+            # Gentle margin wave modulation along edges
+            ruffle_mod = 1.0 + 0.035 * (s_vals ** 1.3) * np.sin(2.0 * np.pi * self.ruffle_freq * s_vals + self.phase)
+            w_profile = w_profile * ruffle_mod
             W = w_profile[:, None] * T
             
             # 4. Botanical 3D Cross-Section Architecture:
             # - Basal concave cup: inside throat (s < 0.35)
-            throat_cup = -0.025 * self.length * np.exp(-12.0 * (s_vals ** 1.8))[:, None] * (1.0 - T ** 2)
+            throat_cup = -0.024 * self.length * np.exp(-12.0 * (s_vals ** 1.8))[:, None] * (1.0 - T ** 2)
             # - Concave inner midrib camber: depression along center (T=0) creating an authentic boat-shaped petal
-            midrib_camber = -0.022 * self.length * (np.sin(np.pi * (s_vals ** 0.85)) ** 1.2)[:, None] * (1.0 - T ** 2)
+            midrib_camber = -0.020 * self.length * (np.sin(np.pi * (s_vals ** 0.85)) ** 1.2)[:, None] * (1.0 - T ** 2)
             # - Ventral nectary furrow
             furrow_mask = (s_vals > 0.05) & (s_vals < 0.44)
             furrow_s = np.where(furrow_mask, np.sin(np.pi * (s_vals - 0.05) / 0.39), 0.0)
@@ -218,7 +223,7 @@ class LilyTepal:
             edge_ruffle = (
                 self.ruffle_amplitude
                 * self.length
-                * (S ** 1.4)
+                * (S ** 1.3)
                 * (T ** 2)
                 * np.sin(2.0 * np.pi * self.ruffle_freq * S + self.phase)
             )
@@ -307,11 +312,11 @@ class LilyFlower:
                 self.tepals.append(tepal)
             return
 
-        base_length = 0.68 * self.scale
-        inner_width = 0.235 * base_length * (0.58 + 0.42 * self.opening)
-        outer_width = 0.138 * base_length * (0.58 + 0.42 * self.opening)
-        throat_depth = 0.44 * base_length
-        reflex = 0.34 * base_length * (self.opening ** 1.2)
+        base_length = 0.72 * self.scale
+        inner_width = 0.215 * base_length * (0.65 + 0.35 * self.opening)
+        outer_width = 0.150 * base_length * (0.65 + 0.35 * self.opening)
+        throat_depth = 0.38 * base_length
+        reflex = 0.40 * base_length * (self.opening ** 1.3)
         
         # 3 Inner Tepals (Petals) at 0°, 120°, 240°
         for i in range(3):
@@ -319,7 +324,7 @@ class LilyFlower:
             angle_jitter = self.rng.uniform(-0.03, 0.03)
             width_var = self.rng.uniform(0.97, 1.03)
             refl_var = self.rng.uniform(0.95, 1.05)
-            ruffle_amp = 0.012 * self.rng.uniform(0.90, 1.10)
+            ruffle_amp = 0.016 * self.rng.uniform(0.90, 1.10)
             
             tepal = LilyTepal(
                 index=i,
@@ -329,13 +334,13 @@ class LilyFlower:
                 max_width=inner_width * width_var,
                 throat_depth=throat_depth,
                 reflex_amount=reflex * refl_var,
-                curl_z=-0.02 * self.scale,
+                curl_z=-0.03 * self.scale,
                 is_bud=False,
                 opening=self.opening,
                 angle_jitter=angle_jitter,
                 width_harmonic=self.rng.uniform(0.30, 0.38),
                 ruffle_amplitude=ruffle_amp,
-                ruffle_freq=self.rng.uniform(1.25, 1.55),
+                ruffle_freq=self.rng.uniform(3.2, 4.2),
                 phase=self.rng.uniform(0.0, 2.0 * np.pi)
             )
             self.tepals.append(tepal)
@@ -346,7 +351,7 @@ class LilyFlower:
             angle_jitter = self.rng.uniform(-0.03, 0.03)
             width_var = self.rng.uniform(0.96, 1.04)
             refl_var = self.rng.uniform(0.95, 1.05)
-            ruffle_amp = 0.006 * self.rng.uniform(0.90, 1.10)
+            ruffle_amp = 0.010 * self.rng.uniform(0.90, 1.10)
             
             tepal = LilyTepal(
                 index=3 + i,
@@ -356,13 +361,13 @@ class LilyFlower:
                 max_width=outer_width * width_var,
                 throat_depth=throat_depth,
                 reflex_amount=reflex * refl_var * 1.10,
-                curl_z=-0.03 * self.scale,
+                curl_z=-0.04 * self.scale,
                 is_bud=False,
                 opening=self.opening,
                 angle_jitter=angle_jitter,
                 width_harmonic=self.rng.uniform(0.26, 0.34),
                 ruffle_amplitude=ruffle_amp,
-                ruffle_freq=self.rng.uniform(1.25, 1.55),
+                ruffle_freq=self.rng.uniform(3.2, 4.2),
                 phase=self.rng.uniform(0.0, 2.0 * np.pi)
             )
             self.tepals.append(tepal)

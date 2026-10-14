@@ -654,7 +654,7 @@ def shade_scene_numba(
                 -0.095, -0.621, -0.840,  0.074
             )
             
-            pcf_rad = 18.0
+            pcf_rad = 8.0
             pcf_count = 0
             
             for k_pcf in range(16):
@@ -698,17 +698,17 @@ def shade_scene_numba(
             s1 = (s1_lobe1 + s1_lobe2) * (0.04 + 0.96 * fresnel) if d1 > 0.0 else 0.0
             
             # Soft shadow subsurface light bleed (warm ivory glow inside petal shadows)
-            bounce_r = 0.08 * trans_k * (1.0 - shadow_factor) * 1.05
-            bounce_g = 0.07 * trans_k * (1.0 - shadow_factor) * 0.98
-            bounce_b = 0.05 * trans_k * (1.0 - shadow_factor) * 0.85
+            bounce_r = 0.12 * trans_k * (1.0 - shadow_factor) * 1.05
+            bounce_g = 0.11 * trans_k * (1.0 - shadow_factor) * 0.98
+            bounce_b = 0.08 * trans_k * (1.0 - shadow_factor) * 0.85
             
             # Luminous botanical shadow response:
-            # White translucent petals maintain warm diffuse bounce and transmission in shadow
-            diffuse_shadow = (0.12 + 0.88 * shadow_factor) if (m_id == 1 or m_id == 2) else shadow_factor
+            # Translucent petals maintain clear contact shadow depth with forward subsurface glow
+            diffuse_shadow = (0.05 + 0.95 * shadow_factor) if (m_id == 1 or m_id == 2) else shadow_factor
             
-            c_r += l1_c0 * (r_alb * (d1 * diffuse_shadow + t1 * max(0.25, shadow_factor)) + bounce_r + s1 * shadow_factor)
-            c_g += l1_c1 * (g_alb * (d1 * diffuse_shadow + t1 * max(0.25, shadow_factor)) + bounce_g + s1 * shadow_factor)
-            c_b += l1_c2 * (b_alb * (d1 * diffuse_shadow + t1 * max(0.25, shadow_factor)) + bounce_b + s1 * shadow_factor)
+            c_r += l1_c0 * (r_alb * (d1 * diffuse_shadow + t1 * max(0.20, shadow_factor)) + bounce_r + s1 * shadow_factor)
+            c_g += l1_c1 * (g_alb * (d1 * diffuse_shadow + t1 * max(0.20, shadow_factor)) + bounce_g + s1 * shadow_factor)
+            c_b += l1_c2 * (b_alb * (d1 * diffuse_shadow + t1 * max(0.20, shadow_factor)) + bounce_b + s1 * shadow_factor)
             
             # --- FILL LIGHT ---
             n_dot_l2 = nx * fill_dir[0] + ny * fill_dir[1] + nz * fill_dir[2]
@@ -942,13 +942,13 @@ def apply_photographic_sensor_curve(
             
             r2 = dx * dx + dy * dy
             vignette = max(0.88, 1.0 - 0.12 * (r2 ** 1.15))
-            exp_scale = 1.05 * vignette
+            exp_scale = 1.20 * vignette
             
             c_r = hdr_rgb[py, px, 0] * exp_scale
             c_g = hdr_rgb[py, px, 1] * exp_scale
             c_b = hdr_rgb[py, px, 2] * exp_scale
             
-            l_white = 2.45
+            l_white = 2.05
             tm_r = (c_r * (1.0 + c_r / (l_white * l_white))) / (1.0 + c_r)
             tm_g = (c_g * (1.0 + c_g / (l_white * l_white))) / (1.0 + c_g)
             tm_b = (c_b * (1.0 + c_b / (l_white * l_white))) / (1.0 + c_b)
