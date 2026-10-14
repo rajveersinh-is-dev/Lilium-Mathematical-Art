@@ -221,22 +221,22 @@ python -m pytest -v
 ```
 Output:
 ```text
-tests/test_geometry.py::test_dirichlet_boundary_conditions PASSED        [  6%]
-tests/test_geometry.py::test_bezier_endpoints_and_derivatives PASSED    [ 12%]
-tests/test_geometry.py::test_bishop_frame_orthonormality PASSED        [ 18%]
-tests/test_geometry.py::test_rodrigues_rotation PASSED                  [ 25%]
-tests/test_geometry.py::test_petal_normal_orientation PASSED           [ 31%]
-tests/test_determinism.py::test_geometric_determinism PASSED           [ 37%]
-tests/test_determinism.py::test_render_determinism PASSED              [ 43%]
-tests/test_rendering.py::test_output_dimensions PASSED                 [ 50%]
-tests/test_rendering.py::test_depth_buffer_monotonicity PASSED         [ 56%]
-tests/test_rendering.py::test_material_ids_present PASSED              [ 62%]
-tests/test_rendering.py::test_pixel_values_finite_and_bounded PASSED   [ 68%]
-tests/test_rendering.py::test_screen_projection_bounds PASSED          [ 75%]
+tests/test_geometry.py::test_dirichlet_boundary_conditions PASSED            [  6%]
+tests/test_geometry.py::test_bezier_endpoints_and_derivatives PASSED         [ 12%]
+tests/test_geometry.py::test_bishop_frame_orthonormality PASSED              [ 18%]
+tests/test_geometry.py::test_rodrigues_rotation PASSED                       [ 25%]
+tests/test_geometry.py::test_petal_normal_orientation PASSED                 [ 31%]
+tests/test_determinism.py::test_geometric_determinism PASSED                 [ 37%]
+tests/test_determinism.py::test_render_determinism PASSED                    [ 43%]
+tests/test_rendering.py::test_output_dimensions PASSED                       [ 50%]
+tests/test_rendering.py::test_depth_buffer_monotonicity PASSED               [ 56%]
+tests/test_rendering.py::test_material_ids_present PASSED                    [ 62%]
+tests/test_rendering.py::test_pixel_values_finite_and_bounded PASSED         [ 68%]
+tests/test_rendering.py::test_screen_projection_bounds PASSED                [ 75%]
 tests/test_equations.py::test_equation_panel_contains_required_models PASSED [ 81%]
-tests/test_equations.py::test_equation_symbols_consistent PASSED       [ 87%]
-tests/test_equations.py::test_typst_file_compiles PASSED               [ 93%]
-tests/test_equations.py::test_latex_syntax_valid PASSED                 [100%]
+tests/test_equations.py::test_equation_symbols_consistent PASSED             [ 87%]
+tests/test_equations.py::test_typst_file_compiles PASSED                     [ 93%]
+tests/test_equations.py::test_latex_syntax_valid PASSED                      [100%]
 
 ============================= 16 passed in 14.8s ==============================
 ```
