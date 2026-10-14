@@ -193,11 +193,26 @@ Stems follow cubic Bézier spatial curves with continuous Bishop parallel transp
 \mathbf{B}(u) = (1-u)^3 \mathbf{P}_0 + 3(1-u)^2 u \mathbf{P}_1 + 3(1-u) u^2 \mathbf{P}_2 + u^3 \mathbf{P}_3
 ```
 
-Drooping lanceolate leaves emerge along the stems under gravitational deflection:
+The bouquet incorporates 56 multi-tiered lanceolate leaves organized into stem-borne foliage, mid-canopy cradling leaves, and outer cascading leaves. Rather than planar fins, each leaf is an organic 3D parametric 2-manifold governed by gravitational catenary droop, lateral S-curvature, axial torsion, sunken midrib groove (*sulcus*), transverse camber, and parallel monocot venation:
 
 ```math
-\mathbf{p}_{\mathrm{leaf}}(s) = \mathbf{p}_{\mathrm{att}} + s L \mathbf{d} - \frac{g}{2} s^2 \hat{\mathbf{z}} + w_{\mathrm{leaf}}(s) t \mathbf{B}_{\mathrm{leaf}}
+\mathbf{p}_{\mathrm{leaf}}(s, t) = \mathbf{p}_{\mathrm{midrib}}(s) + t\,w_{\mathrm{leaf}}(s)\,\mathbf{B}_{\mathrm{leaf}}(s) + c_{\mathrm{leaf}}(s, t)\,\mathbf{N}_{\mathrm{leaf}}(s)
 ```
+
+where the midrib trajectory features natural upward emergence arching and catenary gravitational deflection:
+
+```math
+\mathbf{p}_{\mathrm{midrib}}(s) = \mathbf{p}_{\mathrm{att}} + s L \hat{\mathbf{d}} + \left[ \Delta y_{\mathrm{arch}} s^{0.80} - \delta_{\mathrm{droop}} s^{2.0} - 0.25 \delta_{\mathrm{droop}} \max(0, s - 0.60)^{2.4} \right] \hat{\mathbf{y}} + \delta_{\mathrm{lat}} (s^{1.8} - 0.35 s^{2.4}) \hat{\mathbf{b}} + \tau_{\mathrm{twist}} s^{1.5} \hat{\mathbf{n}}
+```
+
+The cross-sectional elevation profile $c_{\mathrm{leaf}}(s, t)$ forms a realistic botanical keel and margin undulation:
+
+```math
+c_{\mathrm{leaf}}(s, t) = -\delta_{\mathrm{sulcus}} W_{\max} e^{-24 t^2} (1 - 0.5s) + \delta_{\mathrm{camber}} W_{\max} (|t| - t^2) + A_{\mathrm{edge}} s^{1.5} t^2 \sin(2\pi \omega_{\mathrm{leaf}} s)
+```
+
+Surface shading combines rich waxy chlorophyll emerald base tones, bright spring-green midrib canals, 5 parallel secondary vein bundles, and translucent chartreuse tips with dual-lobe anisotropic cuticle sheen.
+
 
 ### 10. Multi-Lobe Microfacet Radiance & Film Tone Mapping
 

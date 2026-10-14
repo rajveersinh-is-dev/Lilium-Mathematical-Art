@@ -103,23 +103,42 @@ def evaluate_leaf_surface_color(
     """
     Evaluates procedural texture for lanceolate lily leaves at coordinate (s, t).
     """
-    s = np.clip(uv[0], 0.0, 1.0)
-    t = np.clip(uv[1], -1.0, 1.0)
+    s = float(np.clip(uv[0], 0.0, 1.0))
+    t = float(np.clip(uv[1], -1.0, 1.0))
     abs_t = abs(t)
     
-    # Deep botanical waxy green
-    deep_green = np.array([0.13, 0.30, 0.11], dtype=np.float32)
-    # Lighter midrib vein running down the center
-    midrib_light = np.array([0.28, 0.48, 0.20], dtype=np.float32)
-    midrib_factor = np.exp(-36.0 * (t ** 2))
+    # Deep botanical waxy forest green
+    deep_green = np.array([0.026, 0.118, 0.028], dtype=np.float32)
+    # Lighter spring-green midrib vein running down the center
+    midrib_light = np.array([0.082, 0.235, 0.058], dtype=np.float32)
+    midrib_factor = float(np.exp(-32.0 * (t ** 2)))
     
-    # Longitudinal leaf striping
-    stripe = 0.04 * np.sin(28.0 * t)
+    # Secondary Monocot Parallel Veins
+    v1 = np.exp(-180.0 * ((abs_t - 0.20) ** 2))
+    v2 = np.exp(-180.0 * ((abs_t - 0.40) ** 2))
+    v3 = np.exp(-180.0 * ((abs_t - 0.60) ** 2))
+    v4 = np.exp(-180.0 * ((abs_t - 0.78) ** 2))
+    v5 = np.exp(-180.0 * ((abs_t - 0.92) ** 2))
+    sec_veins = float((v1 + v2 + v3 + v4 + v5) * 0.016)
+    
+    # Parallel cellular striations
+    striation = float(0.006 * np.sin(160.0 * t) * (1.0 - 0.3 * s))
     
     color = deep_green * (1.0 - midrib_factor) + midrib_light * midrib_factor
-    color = color + stripe
+    color[1] += sec_veins + striation
+    color[0] += 0.35 * sec_veins
     
-    return np.clip(color, 0.0, 1.0), 0.12, 0.28
+    # Translucent margins
+    if abs_t > 0.78:
+        edge_w = (abs_t - 0.78) / 0.22
+        color[1] += 0.045 * edge_w
+        color[0] += 0.018 * edge_w
+        trans = 0.14 + 0.26 * edge_w
+    else:
+        trans = 0.10 + 0.06 * (s ** 2)
+        
+    roughness = 0.18 * (1.0 - midrib_factor) + 0.28 * midrib_factor
+    return np.clip(color, 0.0, 1.0), float(trans), float(roughness)
 
 
 def get_material_by_id(mat_id: int, uv: np.ndarray) -> Tuple[np.ndarray, float, float, float]:
