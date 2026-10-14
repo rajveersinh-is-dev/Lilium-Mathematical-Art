@@ -35,8 +35,8 @@ def main():
         final_output_path="outputs/lilium_mathematical_art.png",
         canvas_size=2400,
         upper_height=1440,
-        caption_height=80,
-        equation_height=880
+        caption_height=0,
+        equation_height=960
     )
     
     total_time = time.time() - t_start

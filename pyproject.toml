@@ -7,7 +7,7 @@ name = "lilium-mathematical-art"
 version = "0.1.0"
 description = "Mathematical reconstruction and procedural synthesis of a high-fidelity white-lily bouquet with rigorous typesetting"
 authors = [
-    {name = "Project Lilium Team"}
+    {name = "Rajveersinh Vishal Pardeshi"}
 ]
 readme = "README.md"
 requires-python = ">=3.10"

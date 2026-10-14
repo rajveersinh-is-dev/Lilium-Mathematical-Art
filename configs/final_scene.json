@@ -1,11 +1,11 @@
 {
-  "scene_title": "Project Lilium — Mathematical Reconstruction of White Lilies",
+  "scene_title": "White Lilies by Rajveersinh Vishal Pardeshi",
   "resolution": {
     "width": 2400,
     "height": 1440,
     "master_canvas_size": 2400,
-    "caption_height": 80,
-    "equation_panel_height": 880
+    "caption_height": 0,
+    "equation_panel_height": 960
   },
   "random_seed": 2026,
   "camera": {
