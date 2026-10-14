@@ -47,8 +47,9 @@ def main():
     print(f"      Total 3D Mesh Vertices: {n_verts:,}")
     print(f"      Total Triangular Facets: {n_faces:,}")
     
-    print(f"[3/4] Initializing Parallel Z-Buffer PBR Renderer ({width}x{height}, FOV: {fov} deg)...")
-    renderer = LilyRenderer(width=width, height=height, fov_deg=fov)
+    cam_pos = config.get("camera", {}).get("position", [0.0, 0.20, 4.35])
+    cam_target = config.get("camera", {}).get("target", [0.0, 0.12, 0.0])
+    renderer = LilyRenderer(width=width, height=height, fov_deg=fov, camera_pos=cam_pos, camera_target=cam_target)
     
     print("[4/4] Rasterizing and Shading Pixels...")
     rgb_array = renderer.render(scene_geom)

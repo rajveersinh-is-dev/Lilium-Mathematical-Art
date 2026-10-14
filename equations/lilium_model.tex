@@ -99,13 +99,14 @@ Surface radiance combines dual-lobe Cook-Torrance microfacets ($\alpha_1 = 0.42,
 I(\mathbf{x}) = \mathbf{c}_{\mathrm{alb}} I_a A_{\mathrm{ssao}} + I_{\mathrm{key}} \left[ \mathbf{c}_{\mathrm{alb}}(d_1 S_{\mathrm{key}} + t_1) + \mathbf{c}_{\mathrm{ivory}} b_{\mathrm{sub}} + s_1 S_{\mathrm{key}} \right] + \mathbf{I}_{\mathrm{fill}} + \mathbf{I}_{\mathrm{rim}}.
 \end{equation}
 
-\section{Discrete Projection and Tone Mapping}
-Pixel color emerges from Z-buffer minimization and ACES-Reinhard filmic tone mapping:
+\section{Macro Optics, Thin-Lens Bokeh and Photographic Response}
+Depth of field simulates a physical macro thin-lens aperture focused at $z_{\mathrm{focus}} = 3.92$ with Circle of Confusion $C(z)$ and 28-tap Fermat spiral bokeh sampling:
 \begin{equation}
-z^*(u, v) = \min_m \{ z : \mathbf{r}(u, v) \cap \mathcal{M}_m \ne \emptyset \},
+C(z) = \min\left( r_{\max}, k_{\mathrm{CoC}} \frac{|z - z_{\mathrm{focus}}|}{z} \right), \quad \mathbf{I}_{\mathrm{DoF}}(\mathbf{u}) = \frac{\sum_{i=1}^{28} w_i \mathbf{I}(\mathbf{u} + C(z) \boldsymbol{\phi}_i)}{\sum_{i=1}^{28} w_i}.
 \end{equation}
+Silhouettes are resolved via subpixel FXAA filtering. Final sensor response integrates $\cos^4$ vignetting, ACES filmic shoulder rolloff, and CMOS sensor micro-grain:
 \begin{equation}
-\mathbf{F}_\theta(u, v) = \left( \frac{1.30 I(1 + 1.30 I / L_{\mathrm{white}}^2)}{1 + 1.30 I} \right)^{1 / 2.2}.
+\mathbf{F}_\theta(u, v) = \left( \frac{1.25 I(1 + 1.25 I / L_{\mathrm{white}}^2)}{1 + 1.25 I} \right)^{1 / 2.2} + \boldsymbol{\xi}_{\mathrm{CMOS}}.
 \end{equation}
 
 \end{document}
