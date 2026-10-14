@@ -17,3 +17,7 @@ ENV/
 # Temporary files
 *.tmp
 temp_*
+scratch/
+outputs/diag_*
+outputs/preview_*
+outputs/test_*

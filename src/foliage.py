@@ -23,7 +23,7 @@ class LilyLeaf:
     """
     Parametric lanceolate Lilium leaf with realistic botanical arch,
     gravitational droop, longitudinal midrib groove, transverse camber,
-    and delicate margin ripples.
+    delicate margin ripples, and view-conscious blade orientation.
     """
     def __init__(
         self,
@@ -31,11 +31,12 @@ class LilyLeaf:
         direction: np.ndarray,
         length: float,
         max_width: float,
-        droop: float = 0.42,
-        curl: float = 0.04,
+        droop: float = 0.18,
+        curl: float = 0.0,
         twist: float = 0.0,
-        arch: float = 0.18,
-        wave: float = 0.012,
+        arch: float = 0.12,
+        wave: float = 0.006,
+        roll: float = 0.0,
         seed: int = 100
     ):
         self.attach = np.asarray(attach_point, dtype=np.float64).reshape(3)
@@ -47,11 +48,12 @@ class LilyLeaf:
         self.twist = twist
         self.arch = arch
         self.wave = wave
+        self.roll = roll
         self.seed = seed
 
     def generate_mesh(
         self,
-        n_s: int = 42,
+        n_s: int = 44,
         n_t: int = 17
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generates 3D vertices, faces, normals, and UVs for the realistic leaf."""
@@ -61,59 +63,60 @@ class LilyLeaf:
         S, T = np.meshgrid(s_vals, t_vals, indexing='ij')
         
         world_up = np.array([0.0, 1.0, 0.0])
+        # Preferred blade normal: balanced between upward (+Y) and camera (+Z)
+        n_pref = normalize(np.array([0.0, 0.60, 0.80]))
         
-        # 1. Botanical spine trajectory:
-        # Leaves emerge with initial direction, arch upward gently, then gravity pulls them down
-        # in a smooth, continuous, weeping curve
-        arch_profile = self.arch * np.sin(np.pi * (s_vals ** 0.75))
-        droop_profile = self.droop * (s_vals ** 2.1)
+        # Arching direction perpendicular to spine direction
+        arch_dir = n_pref - np.dot(n_pref, self.dir) * self.dir
+        if np.linalg.norm(arch_dir) < 1e-4:
+            arch_dir = world_up - np.dot(world_up, self.dir) * self.dir
+        arch_dir = normalize(arch_dir)
+        
+        arch_profile = self.arch * np.sin(np.pi * (s_vals ** 0.80))
+        droop_profile = self.droop * (s_vals ** 2.2)
         curl_profile = self.curl * (s_vals ** 1.8)
         
-        # Upward anatomical normal for the leaf blade
-        leaf_up = world_up - np.dot(world_up, self.dir) * self.dir
-        if np.linalg.norm(leaf_up) < 1e-4:
-            leaf_up = np.array([0.0, 0.0, 1.0])
-        leaf_up = normalize(leaf_up)
-        
-        # Initial binormal across blade
-        leaf_b0 = normalize(np.cross(self.dir, leaf_up))
+        binorm_init = normalize(np.cross(self.dir, arch_dir))
         
         spine_pts = (
             self.attach[None, :]
             + (s_vals[:, None] * self.length) * self.dir[None, :]
-            + (self.length * arch_profile[:, None]) * leaf_up[None, :]
+            + (self.length * arch_profile[:, None]) * arch_dir[None, :]
             - (self.length * droop_profile[:, None]) * world_up[None, :]
-            + (self.length * curl_profile[:, None]) * leaf_b0[None, :]
+            + (self.length * curl_profile[:, None]) * binorm_init[None, :]
         )
         
-        # Compute dynamic moving frame along the curved spine
+        # Tangents along curved spine
         ds = 0.001
         s_plus = np.clip(s_vals + ds, 0.0, 1.0)
-        arch_p = self.arch * np.sin(np.pi * (s_plus ** 0.75))
-        droop_p = self.droop * (s_plus ** 2.1)
+        arch_p = self.arch * np.sin(np.pi * (s_plus ** 0.80))
+        droop_p = self.droop * (s_plus ** 2.2)
         curl_p = self.curl * (s_plus ** 1.8)
         spine_pts_plus = (
             self.attach[None, :]
             + (s_plus[:, None] * self.length) * self.dir[None, :]
-            + (self.length * arch_p[:, None]) * leaf_up[None, :]
+            + (self.length * arch_p[:, None]) * arch_dir[None, :]
             - (self.length * droop_p[:, None]) * world_up[None, :]
-            + (self.length * curl_p[:, None]) * leaf_b0[None, :]
+            + (self.length * curl_p[:, None]) * binorm_init[None, :]
         )
-        
         spine_tangents = normalize(spine_pts_plus - spine_pts, axis=-1)
         
-        # Parallel transport / moving frame along spine starting from leaf anatomical frame
+        # Initial frame at s=0
         t0 = spine_tangents[0]
-        n0 = leaf_up - np.dot(leaf_up, t0) * t0
+        n0 = n_pref - np.dot(n_pref, t0) * t0
         if np.linalg.norm(n0) < 1e-4:
-            alt_up = np.array([0.0, 0.0, 1.0])
-            n0 = alt_up - np.dot(alt_up, t0) * t0
+            n0 = world_up - np.dot(world_up, t0) * t0
         n0 = normalize(n0)
         b0 = normalize(np.cross(t0, n0))
         
-        curr_n = n0
-        curr_b = b0
+        # Apply initial roll
+        cos_r = np.cos(self.roll)
+        sin_r = np.sin(self.roll)
+        n0_rot = cos_r * n0 + sin_r * b0
+        b0_rot = -sin_r * n0 + cos_r * b0
         
+        curr_n = n0_rot
+        curr_b = b0_rot
         binormals = []
         normals = []
         
@@ -129,8 +132,7 @@ class LilyLeaf:
                     curr_n = rodrigues_rotation(curr_n, rot_axis, rot_ang)
                 curr_b = normalize(np.cross(t_curr, curr_n))
                 curr_n = normalize(np.cross(curr_b, t_curr))
-            
-            # Apply smooth axial twist
+                
             ang_tw = self.twist * (s_vals[i] ** 1.3)
             cos_tw = np.cos(ang_tw)
             sin_tw = np.sin(ang_tw)
@@ -143,18 +145,18 @@ class LilyLeaf:
         binormals = np.array(binormals)
         normals = np.array(normals)
         
-        # 2. Slender Lanceolate Width Profile:
-        # True lily leaf: peak at s ≈ 0.38, tapering gracefully to acute tip
-        w_profile = (s_vals ** 0.85) * ((1.0 - s_vals) ** 1.15)
-        w_peak = (0.38 ** 0.85) * (0.62 ** 1.15)
+        # Authentic lanceolate width profile:
+        # Peak at s ≈ 0.35, slender taper to acute tip at s = 1.0
+        w_profile = (s_vals ** 0.80) * ((1.0 - s_vals) ** 1.30)
+        w_peak = (0.35 ** 0.80) * (0.65 ** 1.30)
         w_profile = self.max_width * (w_profile / w_peak)
         W = w_profile[:, None] * T
         
-        # 3. Botanical 3D Cross-Section:
-        # Sunken central midrib canal, transverse convex camber, delicate margin ripples
+        # Anatomical cross section:
+        # Longitudinal midrib vein groove and gentle transverse convexity
         phi_wave = rng.uniform(0.0, 2.0 * np.pi)
-        midrib_groove = -0.008 * self.max_width * np.exp(-18.0 * (T ** 2))
-        transverse_camber = 0.024 * self.max_width * (1.0 - T ** 2)
+        midrib_groove = -0.007 * self.max_width * np.exp(-18.0 * (T ** 2))
+        transverse_camber = 0.022 * self.max_width * (1.0 - T ** 2)
         margin_wave = self.wave * self.length * (S ** 1.2) * (T ** 2) * np.sin(6.0 * S + phi_wave)
         c_elev = midrib_groove + transverse_camber + margin_wave
         
@@ -475,11 +477,14 @@ class BouquetScene:
             stem = LilyStem(p0, p1, p2, p3, radius_base=0.034, radius_tip=0.022)
             self.stems.append(stem)
 
-        # Collision detection: ensures leaves cradle blooms without piercing inner petal bell or occluding focal bloom
+        # Collision detection: guarantees leaves cradle blooms without piercing perianths or clipping into each other
+        accepted_sample_pts: List[np.ndarray] = []
+
         def is_leaf_valid(leaf: LilyLeaf) -> bool:
-            verts, _, _, _ = leaf.generate_mesh(n_s=16, n_t=5)
+            verts, _, _, uvs = leaf.generate_mesh(n_s=18, n_t=7)
+            s_coords = uvs[:, 0]
             
-            # Guard the hero focal blossom (Bloom 1): no leaf may enter its forward visual cone
+            # 1. Guard Hero focal blossom (Bloom 1): no leaf may enter its forward visual cone
             hero_c = flower_configs[0]["center"]
             dx = verts[:, 0] - hero_c[0]
             dy = verts[:, 1] - hero_c[1]
@@ -487,9 +492,8 @@ class BouquetScene:
             if np.any((verts[:, 2] > (hero_c[2] - 0.08)) & (dist_hero_xy < 0.62 * flower_configs[0]["scale"])):
                 return False
 
+            # 2. Strict perianth exclusion volume for all flowers
             for fc in flower_configs:
-                if fc.get("is_bud", False):
-                    continue
                 c = fc["center"]
                 facing = fc["facing"]
                 scale = fc["scale"]
@@ -498,201 +502,215 @@ class BouquetScene:
                 v_perp = v_rel - d_par[:, None] * facing[None, :]
                 d_perp = np.linalg.norm(v_perp, axis=1)
                 
-                # Reject if leaf penetrates inside flower trumpet bell (forward hemisphere)
-                inside_bell = (d_par > -0.04 * scale) & (d_par < 0.32 * scale) & (d_perp < 0.36 * scale)
-                if np.sum(inside_bell) >= 2:
+                # Trumpet perianth conical envelope
+                in_longitudinal = (d_par >= -0.10 * scale) & (d_par <= 0.46 * scale)
+                r_envelope = scale * np.clip(0.18 + 1.10 * np.maximum(0.0, d_par / scale + 0.10), 0.18, 0.65) + 0.04
+                if np.any(in_longitudinal & (d_perp <= r_envelope)):
                     return False
+
+            # 3. Leaf-to-Leaf Collision Detection (blades must not intersect)
+            blade_mask = s_coords > 0.18
+            candidate_blade = verts[blade_mask]
+            
+            if len(accepted_sample_pts) > 0 and len(candidate_blade) > 0:
+                cand_pts = candidate_blade[::2]
+                all_accepted = np.vstack(accepted_sample_pts)
+                diff = cand_pts[:, None, :] - all_accepted[None, :, :]
+                dist_sq = np.sum(diff * diff, axis=-1)
+                min_dist = np.sqrt(np.min(dist_sq))
+                if min_dist < 0.055:
+                    return False
+                    
             return True
 
-        # 1. Broad Lanceolate Framing Foliage (30 verified botanical leaves):
-        # A. Upper Crown Fan (6 leaves reaching up to frame the top apex bloom)
-        for k in range(6):
-            ang = -0.55 * np.pi + k * (1.10 * np.pi / 5.0) + self.rng.uniform(-0.06, 0.06)
-            attach = np.array([
-                0.20 * np.cos(ang),
-                self.rng.uniform(0.30, 0.48),
-                self.rng.uniform(-0.14, -0.06)
-            ])
-            dir_vec = normalize(np.array([
-                0.65 * np.cos(ang),
-                self.rng.uniform(0.75, 0.92),
-                self.rng.uniform(-0.10, 0.08)
-            ]))
-            leaf = LilyLeaf(
-                attach_point=attach,
-                direction=dir_vec,
-                length=self.rng.uniform(1.20, 1.45),
-                max_width=self.rng.uniform(0.14, 0.18),
-                droop=self.rng.uniform(0.18, 0.28),
-                curl=self.rng.uniform(-0.03, 0.03),
-                twist=self.rng.uniform(-0.10, 0.10),
-                arch=self.rng.uniform(0.18, 0.24),
-                wave=0.008,
-                seed=int(self.rng.randint(10000, 99999))
-            )
+        def try_add_leaf(leaf: LilyLeaf) -> bool:
             if is_leaf_valid(leaf):
                 self.leaves.append(leaf)
+                verts, _, _, uvs = leaf.generate_mesh(n_s=18, n_t=7)
+                blade_pts = verts[uvs[:, 0] > 0.18][::2]
+                accepted_sample_pts.append(blade_pts)
+                return True
+            return False
 
-        # B. Left & Right Flank Wings (12 leaves framing the sides with lush balance)
+        # 1. Broad Lanceolate Framing Foliage (Verified Botanical Lilium Foliage):
+        # A. Upper Crown Fan (Framing the crown apex bloom from behind, Z in [-0.25, -0.12])
+        fan_angles = np.linspace(-0.62 * np.pi, 0.62 * np.pi, 12)
+        for ang in fan_angles:
+            if abs(ang) < 0.16:
+                continue
+            for attempt in range(30):
+                a_jitter = ang + self.rng.uniform(-0.05, 0.05)
+                attach = np.array([
+                    0.22 * np.cos(a_jitter),
+                    self.rng.uniform(0.36, 0.54),
+                    self.rng.uniform(-0.25, -0.12)
+                ])
+                dir_vec = normalize(np.array([
+                    0.85 * np.cos(a_jitter),
+                    self.rng.uniform(0.65, 0.88),
+                    self.rng.uniform(-0.16, -0.04)
+                ]))
+                leaf = LilyLeaf(
+                    attach_point=attach,
+                    direction=dir_vec,
+                    length=self.rng.uniform(1.05, 1.25),
+                    max_width=self.rng.uniform(0.14, 0.17),
+                    droop=self.rng.uniform(0.14, 0.20),
+                    curl=self.rng.uniform(-0.02, 0.02),
+                    twist=self.rng.uniform(-0.15, 0.15),
+                    arch=self.rng.uniform(0.10, 0.14),
+                    wave=0.005,
+                    roll=self.rng.uniform(-0.25, 0.25),
+                    seed=int(self.rng.randint(10000, 99999))
+                )
+                if try_add_leaf(leaf):
+                    break
+
+        # B. Left Lateral Flank (Radiating out to the left, framing the bouquet silhouette)
+        left_pitches = [0.35, 0.18, 0.0, -0.18, -0.32]
+        for pitch in left_pitches:
+            for attempt in range(30):
+                attach = np.array([
+                    -self.rng.uniform(0.24, 0.40),
+                    self.rng.uniform(-0.10, 0.30),
+                    self.rng.uniform(-0.24, -0.10)
+                ])
+                dir_vec = normalize(np.array([
+                    -self.rng.uniform(0.90, 1.15),
+                    pitch + self.rng.uniform(-0.05, 0.05),
+                    self.rng.uniform(-0.16, -0.04)
+                ]))
+                leaf = LilyLeaf(
+                    attach_point=attach,
+                    direction=dir_vec,
+                    length=self.rng.uniform(1.10, 1.30),
+                    max_width=self.rng.uniform(0.14, 0.17),
+                    droop=self.rng.uniform(0.16, 0.22),
+                    curl=-0.02,
+                    twist=self.rng.uniform(-0.20, 0.20),
+                    arch=self.rng.uniform(0.10, 0.15),
+                    wave=0.005,
+                    roll=self.rng.uniform(-0.30, 0.15),
+                    seed=int(self.rng.randint(20000, 39999))
+                )
+                if try_add_leaf(leaf):
+                    break
+
+        # C. Right Lateral Flank (Radiating out to the right, framing the bouquet silhouette)
+        right_pitches = [0.35, 0.18, 0.0, -0.18, -0.32]
+        for pitch in right_pitches:
+            for attempt in range(30):
+                attach = np.array([
+                    self.rng.uniform(0.24, 0.40),
+                    self.rng.uniform(-0.10, 0.30),
+                    self.rng.uniform(-0.24, -0.10)
+                ])
+                dir_vec = normalize(np.array([
+                    self.rng.uniform(0.90, 1.15),
+                    pitch + self.rng.uniform(-0.05, 0.05),
+                    self.rng.uniform(-0.16, -0.04)
+                ]))
+                leaf = LilyLeaf(
+                    attach_point=attach,
+                    direction=dir_vec,
+                    length=self.rng.uniform(1.10, 1.30),
+                    max_width=self.rng.uniform(0.14, 0.17),
+                    droop=self.rng.uniform(0.16, 0.22),
+                    curl=0.02,
+                    twist=self.rng.uniform(-0.20, 0.20),
+                    arch=self.rng.uniform(0.10, 0.15),
+                    wave=0.005,
+                    roll=self.rng.uniform(-0.15, 0.30),
+                    seed=int(self.rng.randint(40000, 59999))
+                )
+                if try_add_leaf(leaf):
+                    break
+
+        # D. Lower Supportive Flank Collar (Left & Right only, cradling lower flowers, leaving stems and raffia tie visible)
         for k in range(3):
-            # Left Upper Wing (arching upward-left)
-            attach_lu = np.array([
-                -self.rng.uniform(0.20, 0.40),
-                self.rng.uniform(0.35, 0.55),
-                self.rng.uniform(-0.16, -0.06)
-            ])
-            dir_lu = normalize(np.array([
-                -self.rng.uniform(0.85, 1.15),
-                self.rng.uniform(0.30, 0.60),
-                self.rng.uniform(-0.10, 0.05)
-            ]))
-            leaf_lu = LilyLeaf(
-                attach_point=attach_lu,
-                direction=dir_lu,
-                length=self.rng.uniform(1.35, 1.65),
-                max_width=self.rng.uniform(0.15, 0.19),
-                droop=self.rng.uniform(0.25, 0.35),
-                curl=-0.02,
-                twist=self.rng.uniform(-0.12, 0.12),
-                arch=self.rng.uniform(0.22, 0.28),
-                wave=0.008,
-                seed=int(self.rng.randint(20000, 29999))
-            )
-            if is_leaf_valid(leaf_lu):
-                self.leaves.append(leaf_lu)
+            for attempt in range(30):
+                attach = np.array([
+                    -self.rng.uniform(0.24, 0.38),
+                    self.rng.uniform(-0.46, -0.34),
+                    self.rng.uniform(-0.16, -0.05)
+                ])
+                dir_vec = normalize(np.array([
+                    -self.rng.uniform(0.85, 1.10),
+                    -self.rng.uniform(0.20, 0.40),
+                    self.rng.uniform(-0.12, 0.0)
+                ]))
+                leaf = LilyLeaf(
+                    attach_point=attach,
+                    direction=dir_vec,
+                    length=self.rng.uniform(0.95, 1.15),
+                    max_width=self.rng.uniform(0.14, 0.17),
+                    droop=self.rng.uniform(0.16, 0.22),
+                    curl=-0.02,
+                    twist=self.rng.uniform(-0.15, 0.15),
+                    arch=self.rng.uniform(0.10, 0.14),
+                    wave=0.005,
+                    roll=-0.20,
+                    seed=int(self.rng.randint(60000, 69999))
+                )
+                if try_add_leaf(leaf):
+                    break
 
-            # Left Lower Wing (arching downward-left)
-            attach_ll = np.array([
-                -self.rng.uniform(0.25, 0.45),
-                self.rng.uniform(-0.25, -0.05),
-                self.rng.uniform(-0.16, -0.06)
-            ])
-            dir_ll = normalize(np.array([
-                -self.rng.uniform(0.95, 1.25),
-                self.rng.uniform(-0.05, 0.20),
-                self.rng.uniform(-0.10, 0.05)
-            ]))
-            leaf_ll = LilyLeaf(
-                attach_point=attach_ll,
-                direction=dir_ll,
-                length=self.rng.uniform(1.35, 1.65),
-                max_width=self.rng.uniform(0.15, 0.19),
-                droop=self.rng.uniform(0.28, 0.38),
-                curl=-0.02,
-                twist=self.rng.uniform(-0.12, 0.12),
-                arch=self.rng.uniform(0.22, 0.28),
-                wave=0.008,
-                seed=int(self.rng.randint(25000, 34999))
-            )
-            if is_leaf_valid(leaf_ll):
-                self.leaves.append(leaf_ll)
+        for k in range(3):
+            for attempt in range(30):
+                attach = np.array([
+                    self.rng.uniform(0.24, 0.38),
+                    self.rng.uniform(-0.46, -0.34),
+                    self.rng.uniform(-0.16, -0.05)
+                ])
+                dir_vec = normalize(np.array([
+                    self.rng.uniform(0.85, 1.10),
+                    -self.rng.uniform(0.20, 0.40),
+                    self.rng.uniform(-0.12, 0.0)
+                ]))
+                leaf = LilyLeaf(
+                    attach_point=attach,
+                    direction=dir_vec,
+                    length=self.rng.uniform(0.95, 1.15),
+                    max_width=self.rng.uniform(0.14, 0.17),
+                    droop=self.rng.uniform(0.16, 0.22),
+                    curl=0.02,
+                    twist=self.rng.uniform(-0.15, 0.15),
+                    arch=self.rng.uniform(0.10, 0.14),
+                    wave=0.005,
+                    roll=0.20,
+                    seed=int(self.rng.randint(70000, 79999))
+                )
+                if try_add_leaf(leaf):
+                    break
 
-            # Right Upper Wing (arching upward-right)
-            attach_ru = np.array([
-                self.rng.uniform(0.20, 0.40),
-                self.rng.uniform(0.35, 0.55),
-                self.rng.uniform(-0.16, -0.06)
-            ])
-            dir_ru = normalize(np.array([
-                self.rng.uniform(0.85, 1.15),
-                self.rng.uniform(0.30, 0.60),
-                self.rng.uniform(-0.10, 0.05)
-            ]))
-            leaf_ru = LilyLeaf(
-                attach_point=attach_ru,
-                direction=dir_ru,
-                length=self.rng.uniform(1.35, 1.65),
-                max_width=self.rng.uniform(0.15, 0.19),
-                droop=self.rng.uniform(0.25, 0.35),
-                curl=0.02,
-                twist=self.rng.uniform(-0.12, 0.12),
-                arch=self.rng.uniform(0.22, 0.28),
-                wave=0.008,
-                seed=int(self.rng.randint(30000, 39999))
-            )
-            if is_leaf_valid(leaf_ru):
-                self.leaves.append(leaf_ru)
-
-            # Right Lower Wing (arching downward-right)
-            attach_rl = np.array([
-                self.rng.uniform(0.25, 0.45),
-                self.rng.uniform(-0.25, -0.05),
-                self.rng.uniform(-0.16, -0.06)
-            ])
-            dir_rl = normalize(np.array([
-                self.rng.uniform(0.95, 1.25),
-                self.rng.uniform(-0.05, 0.20),
-                self.rng.uniform(-0.10, 0.05)
-            ]))
-            leaf_rl = LilyLeaf(
-                attach_point=attach_rl,
-                direction=dir_rl,
-                length=self.rng.uniform(1.35, 1.65),
-                max_width=self.rng.uniform(0.15, 0.19),
-                droop=self.rng.uniform(0.28, 0.38),
-                curl=0.02,
-                twist=self.rng.uniform(-0.12, 0.12),
-                arch=self.rng.uniform(0.22, 0.28),
-                wave=0.008,
-                seed=int(self.rng.randint(35000, 44999))
-            )
-            if is_leaf_valid(leaf_rl):
-                self.leaves.append(leaf_rl)
-
-        # C. Lower Supportive Collar (10 leaves arching laterally to cradle the bouquet base)
-        for k in range(10):
-            ang = -0.92 * np.pi + k * (1.84 * np.pi / 9.0) + self.rng.uniform(-0.05, 0.05)
-            attach = np.array([
-                0.14 * np.cos(ang),
-                self.rng.uniform(-0.45, -0.30),
-                0.08 * np.sin(ang) - 0.08
-            ])
-            dir_c = normalize(np.array([
-                1.05 * np.cos(ang),
-                self.rng.uniform(0.12, 0.28),
-                0.35 * np.sin(ang) - 0.12
-            ]))
-            leaf = LilyLeaf(
-                attach_point=attach,
-                direction=dir_c,
-                length=self.rng.uniform(1.30, 1.65),
-                max_width=self.rng.uniform(0.15, 0.19),
-                droop=self.rng.uniform(0.28, 0.38),
-                curl=self.rng.uniform(-0.04, 0.04),
-                twist=self.rng.uniform(-0.15, 0.15),
-                arch=self.rng.uniform(0.22, 0.28),
-                wave=0.008,
-                seed=int(self.rng.randint(40000, 99999))
-            )
-            if is_leaf_valid(leaf):
-                self.leaves.append(leaf)
-
-        # D. Inter-Floral Cauline Leaves (8 leaves peeking through flower gaps in depth)
-        for k in range(8):
+        # E. Cauline Accents (Behind lower flowers, peeking through gaps)
+        for k in range(6):
             stem_idx = k
-            u_attach = self.rng.uniform(0.40, 0.70)
-            stem_pt = self.stems[stem_idx].curve.evaluate(np.array([u_attach]))[0]
-            
-            ang_leaf = k * 137.5 * (np.pi / 180.0) + self.rng.uniform(-0.10, 0.10)
-            dir_vec = normalize(np.array([
-                0.85 * np.cos(ang_leaf),
-                self.rng.uniform(0.25, 0.55),
-                0.35 * np.sin(ang_leaf) - 0.16
-            ]))
-            leaf = LilyLeaf(
-                attach_point=stem_pt,
-                direction=dir_vec,
-                length=self.rng.uniform(0.85, 1.10),
-                max_width=self.rng.uniform(0.13, 0.16),
-                droop=self.rng.uniform(0.24, 0.34),
-                curl=self.rng.uniform(-0.03, 0.03),
-                twist=self.rng.uniform(-0.10, 0.10),
-                arch=self.rng.uniform(0.20, 0.26),
-                wave=0.007,
-                seed=int(self.rng.randint(50000, 99999))
-            )
-            if is_leaf_valid(leaf):
-                self.leaves.append(leaf)
+            for attempt in range(30):
+                u_attach = self.rng.uniform(0.38, 0.58)
+                stem_pt = self.stems[stem_idx].curve.evaluate(np.array([u_attach]))[0]
+                stem_pt[2] = min(stem_pt[2], -0.10)
+                ang_leaf = k * 137.5 * (np.pi / 180.0) + self.rng.uniform(-0.12, 0.12)
+                dir_vec = normalize(np.array([
+                    0.85 * np.cos(ang_leaf),
+                    self.rng.uniform(0.15, 0.35),
+                    -self.rng.uniform(0.08, 0.18)
+                ]))
+                leaf = LilyLeaf(
+                    attach_point=stem_pt,
+                    direction=dir_vec,
+                    length=self.rng.uniform(0.65, 0.85),
+                    max_width=self.rng.uniform(0.13, 0.16),
+                    droop=self.rng.uniform(0.12, 0.18),
+                    curl=0.0,
+                    twist=self.rng.uniform(-0.12, 0.12),
+                    arch=self.rng.uniform(0.08, 0.12),
+                    wave=0.005,
+                    roll=self.rng.uniform(-0.20, 0.20),
+                    seed=int(self.rng.randint(80000, 99999))
+                )
+                if try_add_leaf(leaf):
+                    break
 
     def generate_bouquet_geometry(self) -> Dict[str, Any]:
         """
