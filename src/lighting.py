@@ -24,26 +24,26 @@ class DirectionalLight:
 class StudioLighting:
     """Three-point studio lighting with botanical chiaroscuro environment."""
     def __init__(self):
-        # 1. Key light: warm directional illumination from upper-left in front
+        # 1. Key light: sculpted directional illumination from upper-left (skims across petal curves)
         self.key = DirectionalLight(
-            direction=np.array([-0.42, 0.65, 0.63]),
-            color=np.array([1.0, 0.99, 0.96]),
-            intensity=1.25
+            direction=np.array([-0.58, 0.58, 0.48]),
+            color=np.array([1.0, 0.98, 0.94]),
+            intensity=1.45
         )
-        # 2. Fill light: cool diffused light from upper-right
+        # 2. Fill light: soft cool ambient fill from lower-right
         self.fill = DirectionalLight(
-            direction=np.array([0.55, 0.38, 0.74]),
-            color=np.array([0.88, 0.94, 1.0]),
-            intensity=0.55
+            direction=np.array([0.55, 0.28, 0.62]),
+            color=np.array([0.86, 0.92, 1.0]),
+            intensity=0.38
         )
         # 3. Rim / Back light: edge backlight from behind-above for petal translucency
         self.rim = DirectionalLight(
-            direction=np.array([0.20, 0.72, -0.66]),
-            color=np.array([0.96, 0.98, 0.92]),
-            intensity=0.45
+            direction=np.array([0.15, 0.75, -0.64]),
+            color=np.array([0.98, 0.98, 0.92]),
+            intensity=0.68
         )
-        # Ambient color: soft botanical fill
-        self.ambient_radiance = np.array([0.15, 0.17, 0.15], dtype=np.float32)
+        # Ambient color: refined chiaroscuro fill
+        self.ambient_radiance = np.array([0.055, 0.065, 0.055], dtype=np.float32)
 
     def shade_surface(
         self,
@@ -109,12 +109,13 @@ def evaluate_background_field(u: np.ndarray, v: np.ndarray) -> np.ndarray:
     # Soft Gaussian light pool behind bouquet
     light_pool = np.exp(-3.5 * r2)[:, :, None]
     
-    # Colors: warm deep olive-charcoal center, velvety near-black forest green edges
-    center_color = np.array([0.038, 0.055, 0.036], dtype=np.float32).reshape(1, 1, 3)
-    edge_color = np.array([0.009, 0.015, 0.011], dtype=np.float32).reshape(1, 1, 3)
+    # Colors: museum-quality velvety dark charcoal-slate with soft warm botanical luminance
+    center_color = np.array([0.016, 0.022, 0.018], dtype=np.float32).reshape(1, 1, 3)
+    edge_color = np.array([0.005, 0.007, 0.006], dtype=np.float32).reshape(1, 1, 3)
     
     # Soft vertical atmospheric gradation
     vert_falloff = (0.92 + 0.16 * (1.0 - v))[:, :, None]
     
     bg_rgb = (center_color * light_pool + edge_color * (1.0 - light_pool)) * vert_falloff
     return np.clip(bg_rgb, 0.0, 1.0)
+
