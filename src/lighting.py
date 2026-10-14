@@ -97,22 +97,24 @@ class StudioLighting:
 def evaluate_background_field(u: np.ndarray, v: np.ndarray) -> np.ndarray:
     """
     Evaluates deep botanical chiaroscuro background tone:
-    A rich dark forest green with subtle vignetting and atmospheric depth.
+    A museum-quality dark charcoal-forest green with a soft, warm botanical light pool
+    illuminating the space behind the white-lily bouquet.
     - u, v in [0, 1]
     """
-    # Radial distance from upper center (around bouquet floral focal point)
+    # Radial distance from floral focal point (upper center of bouquet)
     dx = u - 0.50
-    dy = v - 0.45
+    dy = v - 0.40
     r2 = dx * dx + dy * dy
     
-    # Deep botanical charcoal-forest green colors for chiaroscuro separation
-    center_color = np.array([0.016, 0.032, 0.020], dtype=np.float32).reshape(1, 1, 3)
-    edge_color = np.array([0.005, 0.010, 0.007], dtype=np.float32).reshape(1, 1, 3)
+    # Soft Gaussian light pool behind bouquet
+    light_pool = np.exp(-3.5 * r2)[:, :, None]
     
-    vignette = np.clip(1.0 - 1.35 * r2, 0.0, 1.0)[:, :, None]
+    # Colors: warm deep olive-charcoal center, velvety near-black forest green edges
+    center_color = np.array([0.038, 0.055, 0.036], dtype=np.float32).reshape(1, 1, 3)
+    edge_color = np.array([0.009, 0.015, 0.011], dtype=np.float32).reshape(1, 1, 3)
     
-    # Soft subtle vertical gradient
-    vert_grad = (0.90 + 0.20 * (1.0 - v))[:, :, None]
+    # Soft vertical atmospheric gradation
+    vert_falloff = (0.92 + 0.16 * (1.0 - v))[:, :, None]
     
-    bg_rgb = (center_color * vignette + edge_color * (1.0 - vignette)) * vert_grad
+    bg_rgb = (center_color * light_pool + edge_color * (1.0 - light_pool)) * vert_falloff
     return np.clip(bg_rgb, 0.0, 1.0)

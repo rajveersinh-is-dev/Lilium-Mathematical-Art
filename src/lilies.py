@@ -62,8 +62,8 @@ class LilyTepal:
 
     def generate_mesh(
         self,
-        n_s: int = 36,
-        n_t: int = 19
+        n_s: int = 56,
+        n_t: int = 27
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Generates 3D vertices, faces, normals, and UV coordinates in local flower coordinates.
@@ -311,7 +311,7 @@ class LilyFlower:
         
         # 1. Generate Tepals
         for tepal in self.tepals:
-            t_verts, t_faces, t_normals, t_uvs = tepal.generate_mesh(n_s=36, n_t=19)
+            t_verts, t_faces, t_normals, t_uvs = tepal.generate_mesh(n_s=56, n_t=27)
             # Transform from local flower coordinates to world space
             # World = Center + RotMatrix @ Local
             world_verts = self.center + (self.rot_matrix @ t_verts.T).T
@@ -329,15 +329,15 @@ class LilyFlower:
         # 2. Generate Reproductive Organs (only if opening > 0.3)
         if self.opening > 0.3 and not self.is_bud:
             # 6 Stamens (Filaments + Golden Anthers)
-            filament_len = 0.38 * self.scale * self.opening
-            anther_len = 0.085 * self.scale
-            anther_radius = 0.014 * self.scale
+            filament_len = 0.40 * self.scale * self.opening
+            anther_len = 0.096 * self.scale
+            anther_radius = 0.016 * self.scale
             
             for k in range(6):
                 # Angle spaced between tepals
                 ang = k * (np.pi / 3.0) + np.pi / 6.0 + self.rng.uniform(-0.08, 0.08)
                 # Filament curves outward from flower center
-                rad_disp = 0.16 * self.scale * self.opening
+                rad_disp = 0.17 * self.scale * self.opening
                 fil_tip_local = np.array([
                     rad_disp * np.cos(ang),
                     rad_disp * np.sin(ang),
@@ -382,27 +382,42 @@ class LilyFlower:
                 all_mat_ids.append(np.full(len(fil_verts), 3, dtype=np.int32))  # 3 = filament (pale green)
                 vert_offset += len(fil_verts)
                 
-                # Anther at filament tip: elongated ellipsoid
-                anther_dir = normalize(np.array([-np.sin(ang), np.cos(ang), self.rng.uniform(-0.3, 0.3)]))
+                # Anther at filament tip: versatile 2-lobed thecae with dehiscence sulcus
+                anther_dir = normalize(np.array([-np.sin(ang), np.cos(ang), self.rng.uniform(-0.25, 0.25)]))
                 anther_ortho1 = normalize(np.cross(anther_dir, np.array([0.0, 0.0, 1.0])))
                 anther_ortho2 = normalize(np.cross(anther_dir, anther_ortho1))
                 
-                n_lat = 10
-                n_lon = 12
+                n_lat = 14
+                n_lon = 16
                 anther_verts = []
+                anther_uvs_list = []
+                
                 for lat_idx in range(n_lat):
-                    lat = -np.pi / 2.0 + lat_idx * (np.pi / (n_lat - 1))
+                    lat_frac = lat_idx / (n_lat - 1)
+                    lat = -np.pi / 2.0 + lat_frac * np.pi
+                    # Bananoid gentle curvature along length
+                    curve_offset = 0.008 * self.scale * np.cos(lat)
+                    
                     for lon_idx in range(n_lon):
+                        lon_frac = lon_idx / n_lon
                         lon = lon_idx * (2.0 * np.pi / n_lon)
+                        
+                        # Two-lobed pollen thecae profile: indentation at lon = 0 and lon = pi
+                        theca_mod = 1.0 + 0.32 * np.cos(2.0 * lon)
+                        rad_curr = anther_radius * theca_mod * np.cos(lat)
+                        
                         x_e = (anther_len * 0.5) * np.sin(lat)
-                        y_e = anther_radius * np.cos(lat) * np.cos(lon)
-                        z_e = anther_radius * np.cos(lat) * np.sin(lon)
+                        y_e = rad_curr * np.cos(lon) + curve_offset
+                        z_e = rad_curr * np.sin(lon)
                         
                         disp_local = x_e * anther_dir + y_e * anther_ortho1 + z_e * anther_ortho2
                         disp_world = self.rot_matrix @ disp_local
                         anther_verts.append(fil_tip_world + disp_world)
+                        anther_uvs_list.append([lat_frac, lon_frac * 2.0 - 1.0])
                         
                 anther_verts = np.array(anther_verts, dtype=np.float64)
+                anther_uvs = np.array(anther_uvs_list, dtype=np.float64)
+                
                 anther_faces = []
                 for i in range(n_lat - 1):
                     for j in range(n_lon):
@@ -415,7 +430,6 @@ class LilyFlower:
                         anther_faces.append([p1, p3, p2])
                 anther_faces = np.array(anther_faces, dtype=np.int32)
                 anther_normals = compute_mesh_normals(anther_verts, anther_faces)
-                anther_uvs = np.zeros((len(anther_verts), 2), dtype=np.float64)
                 
                 all_verts.append(anther_verts)
                 all_faces.append(anther_faces + vert_offset)
@@ -424,23 +438,64 @@ class LilyFlower:
                 all_mat_ids.append(np.full(len(anther_verts), 4, dtype=np.int32))  # 4 = anther (golden pollen)
                 vert_offset += len(anther_verts)
                 
-            # Central Pistil & Stigma
-            pistil_len = 0.42 * self.scale * self.opening
+            # Central Pistil & 3-Lobed Stigma
+            pistil_len = 0.44 * self.scale * self.opening
             stigma_world = self.center + self.rot_matrix @ np.array([0.02 * self.scale, 0.01 * self.scale, pistil_len])
             pistil_base = self.center + self.rot_matrix @ np.array([0.0, 0.0, -0.06 * self.scale])
             
+            # Style tube
             pistil_verts = []
-            for u in np.linspace(0.0, 1.0, 10):
+            pistil_uvs_list = []
+            n_style_steps = 12
+            for u in np.linspace(0.0, 1.0, n_style_steps):
                 center_pt = (1.0 - u) * pistil_base + u * stigma_world
-                r_pis = (0.007 - 0.002 * u) * self.scale
+                r_pis = (0.0075 - 0.0018 * u) * self.scale
                 for phi_idx in range(8):
                     phi = phi_idx * (2.0 * np.pi / 8.0)
                     rad_v = np.array([np.cos(phi), np.sin(phi), 0.0])
                     pistil_verts.append(center_pt + self.rot_matrix @ (rad_v * r_pis))
+                    pistil_uvs_list.append([u, phi_idx / 8.0])
+                    
+            pistil_faces = []
+            for i in range(n_style_steps - 1):
+                for j in range(8):
+                    j_next = (j + 1) % 8
+                    p0 = i * 8 + j
+                    p1 = i * 8 + j_next
+                    p2 = (i + 1) * 8 + j
+                    p3 = (i + 1) * 8 + j_next
+                    pistil_faces.append([p0, p1, p2])
+                    pistil_faces.append([p1, p3, p2])
+            
+            # 3-Lobed Swollen Stigma Pad at style tip
+            n_stigma_radial = 18
+            stigma_rad_base = 0.018 * self.scale
+            stigma_tip_center = stigma_world + self.rot_matrix @ np.array([0.0, 0.0, 0.012 * self.scale])
+            
+            # Center vertex of stigma
+            stigma_center_idx = len(pistil_verts)
+            pistil_verts.append(stigma_tip_center)
+            pistil_uvs_list.append([1.0, 0.0])
+            
+            for j in range(n_stigma_radial):
+                theta = j * (2.0 * np.pi / n_stigma_radial)
+                # 3-lobed clover morphology
+                r_lobe = stigma_rad_base * (1.0 + 0.42 * np.cos(3.0 * theta))
+                lobe_disp = np.array([r_lobe * np.cos(theta), r_lobe * np.sin(theta), -0.004 * self.scale])
+                pistil_verts.append(stigma_world + self.rot_matrix @ lobe_disp)
+                pistil_uvs_list.append([1.0, j / n_stigma_radial])
+                
+            # Stigma cap triangles
+            for j in range(n_stigma_radial):
+                j_next = (j + 1) % n_stigma_radial
+                v_curr = stigma_center_idx + 1 + j
+                v_next = stigma_center_idx + 1 + j_next
+                pistil_faces.append([stigma_center_idx, v_curr, v_next])
+                
             pistil_verts = np.array(pistil_verts, dtype=np.float64)
-            pistil_faces = fil_faces.copy()
+            pistil_faces = np.array(pistil_faces, dtype=np.int32)
             pistil_normals = compute_mesh_normals(pistil_verts, pistil_faces)
-            pistil_uvs = np.zeros((len(pistil_verts), 2), dtype=np.float64)
+            pistil_uvs = np.array(pistil_uvs_list, dtype=np.float64)
             
             all_verts.append(pistil_verts)
             all_faces.append(pistil_faces + vert_offset)

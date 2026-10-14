@@ -63,36 +63,34 @@
   $ c(s, t) = -delta_"groove" e^(-26 t^2) (1 - 0.45s) + delta_"arch" s (1 - t^2) + A_"ruf" s^(1.4) t^2 sin(2pi omega s + phi) $
 
   == 6. Longitudinal Vein & Papillae Fields
-  The multi-scale vein intensity field $V(s, t)$ combines primary midrib furrow and $K=4$ branching Gaussian pathways:
-  $ V(s, t) = 1 + sum_(k=1)^K a_k exp lr( -frac((|t| - tau_k(s))^2, 2sigma_k^2) ) $
-  with vein trajectories $tau_k(s) = 0.22 k (1 - 0.15s)$. Papillae nectar glands near throat evaluate:
-  $ Pi(s, t) = bb(1)_(s in [0.12, 0.38]) dot sin^+(42s) cos^+(34t) dot (0.38 - s) $
+  Multi-scale fibrovascular pathways and 3D carmine nectar papillae evaluate:
+  $ V(s, t) = 1 + sum_(k=1)^4 a_k exp lr( -frac((|t| - tau_k(s))^2, 2sigma_k^2) ), quad tau_k(s) = 0.22 k (1 - 0.15s) $
+  Nectariferous papillae nodules $Pi(s, t)$ perturb surface micro-normals via hash cells:
+  $ bold(n)_"pert" = bold(n) + lr([ delta t thin bold(B) + delta s thin bold(T) ]) dot 0.75 h_"pap" (s, t) $
+  with rich carmine albedo $bold(C)_"pap" = [0.78, 0.12, 0.20]^T$ and basal pink blush $B(s, t) = 0.14 exp(-22(s-0.25)^2 - 14 t^2)$.
 
   == 7. Reproductive Organs (Androecium & Gynoecium)
-  The 6 versatile anthers are prolate spheroids centered at filament apices:
-  $ cal(E)_k = { bold(x) in RR^3 : ((bold(x) - bold(q)_k) dot bold(e)_(1,k))^2 / a^2 + ((bold(x) - bold(q)_k) dot bold(e)_(2,k))^2 / b^2 + ((bold(x) - bold(q)_k) dot bold(e)_(3,k))^2 / c^2 <= 1 } $
-  with pollen radiance $bold(C)_"pollen" = [0.88, 0.48, 0.06]^T$ and micro-granular scattering.
+  The 6 versatile anthers are curved 2-lobed thecae with central dehiscence sulcus:
+  $ r_"theca"(theta) = R_0 (1 - 0.35 cos 2theta), quad bold(C)_"pollen" = [0.94, 0.50, 0.04]^T $
+  The central gynoecium style terminates into a 3-lobed moist glistening stigma pad:
+  $ r_"stigma"(theta) = R_s (1 + 0.42 cos 3theta) $
 
   #colbreak()
 
   == 8. Foliage & Bézier Stem Geometry
   Stem axes are $C^2$ cubic Bézier spatial trajectories:
   $ bold(B)(u) = (1-u)^3 bold(P)_0 + 3(1-u)^2 u bold(P)_1 + 3(1-u) u^2 bold(P)_2 + u^3 bold(P)_3 $
-  Leaves follow lanceolate profiles with gravitational deflection:
-  $ bold(p)_"leaf"(s) = bold(p)_"att" + s L_"leaf" bold(d) - frac(g, 2) s^2 bold(u)_z + w_"leaf"(s) t bold(B)_"leaf" $
+  Lanceolate leaves follow gravitational deflection with axial torsion:
+  $ bold(p)_"leaf"(s) = bold(p)_"att" + s L_"leaf" bold(d) - frac(g, 2) s^2 bold(u)_z + w_"leaf"(s) t bold(B)_"twist"(s) $
 
-  == 9. PBR Reflectance & Subsurface Transmission
-  Surface radiance $I(bold(x))$ balances diffuse reflection, waxy cuticle sheen, and forward subsurface transmission:
-  $ I(bold(x)) = k_a I_a bold(c)_"base" + sum_(ell=1)^3 I_ell lr([
-    bold(c)_"alb" max(0, bold(n) dot bold(omega)_ell) +
-    k_"spec" (bold(n) dot bold(h)_ell)^(alpha_"spec") +
-    k_"sub" bold(c)_"trans" max(0, -bold(n) dot bold(omega)_ell)
-  ]) + bold(I)_"rim" $
-  where half-vector $bold(h)_ell = frac(bold(omega)_ell + bold(omega)_v, ||bold(omega)_ell + bold(omega)_v||)$.
+  == 9. Directional Shadow Map & PCF Penumbra
+  Key illumination is modulated by an orthographic shadow map $Z_"SM"$ with 16-tap Poisson disk percentage-closer filtering (PCF):
+  $ S_"key"(bold(x)) = frac(1, 16) sum_(i=1)^16 bb(1) lr( z_L (bold(x)) - delta_"bias" <= Z_"SM"(bold(u)_L + r_"pcf" bold(xi)_i) ) $
+  Crevices and petal folds are anchored by screen-space ambient occlusion (SSAO) with depth bilateral filtering $A_"ssao"(bold(x))$.
 
-  == 10. Depth Projection & Filmic Tone Operator
-  The discrete pixel color $bold(F)_theta(u, v)$ emerges from Z-buffer depth minimization and ACES-Reinhard filmic tone mapping:
-  $ z^*(u, v) = min_(m) { z : bold(r)(u, v) inter cal(M)_m != nothing }, quad bold(n)^*(u, v) = bold(n)(z^*) $
-  $ bold(F)_theta(u, v) = cal(T) lr([ I(bold(x)^*, bold(n)^*, bold(u)_v) ]) = lr( frac(1.35 I (1 + 1.35 I / L_"white"^2), 1 + 1.35 I) )^(1 / 2.2) $
-  yielding reproducible high-fidelity botanical art across all $Omega$.
+  == 10. Dual-Lobe GGX BRDF & Filmic Tone Operator
+  Surface radiance balances dual-lobe Cook-Torrance microfacets ($alpha_1 = 0.42, alpha_2 = 0.12$), Schlick Fresnel $F(theta)$, and forward subsurface transmission:
+  $ I(bold(x)) = bold(c)_"alb" I_a A_"ssao" + I_"key" lr([ bold(c)_"alb" (d_1 S_"key" + t_1) + bold(c)_"ivory" b_"sub" + s_1 S_"key" ]) + bold(I)_"fill" + bold(I)_"rim" $
+  Discrete pixel color emerges from Z-buffer minimization and ACES-Reinhard filmic tone mapping:
+  $ bold(F)_theta(u, v) = lr( frac(1.30 I (1 + 1.30 I / L_"white"^2), 1 + 1.30 I) )^(1 / 2.2) $
 ]

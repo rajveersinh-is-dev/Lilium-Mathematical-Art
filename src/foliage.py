@@ -20,7 +20,7 @@ from src.geometry import (
 
 
 class LilyLeaf:
-    """Parametric lanceolate lily leaf with parabolic cross-section and gravity droop."""
+    """Parametric lanceolate lily leaf with parabolic cross-section, gravity droop, and axial twist."""
     def __init__(
         self,
         attach_point: np.ndarray,
@@ -29,6 +29,7 @@ class LilyLeaf:
         max_width: float,
         droop: float = 0.25,
         curl: float = 0.05,
+        twist: float = 0.0,
         seed: int = 100
     ):
         self.attach = np.asarray(attach_point, dtype=np.float64).reshape(3)
@@ -37,12 +38,13 @@ class LilyLeaf:
         self.max_width = max_width
         self.droop = droop
         self.curl = curl
+        self.twist = twist
         self.seed = seed
 
     def generate_mesh(
         self,
-        n_s: int = 24,
-        n_t: int = 11
+        n_s: int = 28,
+        n_t: int = 13
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Generates 3D vertices, faces, normals, and UVs for the leaf.
@@ -75,13 +77,20 @@ class LilyLeaf:
         
         W = w_profile[:, None] * T  # (n_s, n_t)
         
+        # Axial twist as leaf arches outward
+        twist_ang = self.twist * (s_vals ** 1.8)
+        cos_tw = np.cos(twist_ang)[:, None]
+        sin_tw = np.sin(twist_ang)[:, None]
+        binormal_tw = cos_tw * binormal[None, :] + sin_tw * normal[None, :]
+        normal_tw = -sin_tw * binormal[None, :] + cos_tw * normal[None, :]
+        
         # V-shaped cross section: fold elevation along midrib
         # Center t=0 is lowest, edges are slightly raised
         v_fold = 0.035 * self.max_width * (T ** 2)
         
-        vx = spine_pts[:, 0, None] + W * binormal[0] + v_fold * normal[0]
-        vy = spine_pts[:, 1, None] + W * binormal[1] + v_fold * normal[1]
-        vz = spine_pts[:, 2, None] + W * binormal[2] + v_fold * normal[2]
+        vx = spine_pts[:, 0, None] + W * binormal_tw[:, 0, None] + v_fold * normal_tw[:, 0, None]
+        vy = spine_pts[:, 1, None] + W * binormal_tw[:, 1, None] + v_fold * normal_tw[:, 1, None]
+        vz = spine_pts[:, 2, None] + W * binormal_tw[:, 2, None] + v_fold * normal_tw[:, 2, None]
         
         vertices = np.stack([vx, vy, vz], axis=-1).reshape(-1, 3)
         uvs = np.stack([S, T], axis=-1).reshape(-1, 2)
@@ -416,7 +425,7 @@ class BouquetScene:
             
         # 3. Generate Leaves
         for leaf in self.leaves:
-            l_verts, l_faces, l_normals, l_uvs = leaf.generate_mesh(n_s=20, n_t=9)
+            l_verts, l_faces, l_normals, l_uvs = leaf.generate_mesh(n_s=36, n_t=15)
             all_verts.append(l_verts)
             all_faces.append(l_faces + vert_offset)
             all_normals.append(l_normals)
