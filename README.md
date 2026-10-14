@@ -48,8 +48,8 @@ The composition is structured into two seamlessly integrated vertical regions:
 │                     (2400 × 1440 pixels)                        │
 │                                                                 │
 │   Photorealistic procedural 3D render of a lush bouquet of      │
-│   10 blooming white lilies, swelling buds, and lanceolate       │
-│   foliage rendered against a deep chiaroscuro forest field.     │
+│   8 blooming white lilies and lanceolate foliage rendered       │
+│   against a deep chiaroscuro forest field.                      │
 │                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
@@ -65,7 +65,7 @@ The composition is structured into two seamlessly integrated vertical regions:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Upper Botanical Domain (60% — 2400 × 1440 px)**: A photorealistic, analytical 3D synthesis of a bouquet of 10 white lilies (_Lilium candidum / Oriental hybrid_) with swelling perianth buds, curving Bézier stems, and arching lanceolate leaves. Lighting features dual-lobe microfacet specular highlights, forward subsurface translucency, contact ambient occlusion (SSAO), 3D carmine nectar papillae, and golden-amber pollen anthers.
+1. **Upper Botanical Domain (60% — 2400 × 1440 px)**: A photorealistic, analytical 3D synthesis of a bouquet of 8 blooming white lilies (_Lilium candidum / Oriental hybrid_) with curving Bézier stems and arching lanceolate leaves. Lighting features dual-lobe microfacet specular highlights, forward subsurface translucency, contact ambient occlusion (SSAO), 3D carmine nectar papillae, and golden-amber pollen anthers.
 2. **Mathematical Panel (40% — 2400 × 960 px)**: A pure white mathematical panel starting directly beneath the bouquet with no visual border. It presents:
    - Centered title: **White Lilies by Rajveersinh Vishal Pardeshi**
    - Exact explanatory sentence:
@@ -107,17 +107,17 @@ where the color-channel activation operator $\mathcal{F}(x)$ is bounded in $[0, 
 
 ### 2. Multi-Flower Scene Ray-Casting & Depth Composition
 
-The complete bouquet $\mathbf{H}_v(x, y)$ evaluates the optical contribution across $N=10$ flowers with depth-ordered occlusion:
+The complete bouquet $\mathbf{H}_v(x, y)$ evaluates the optical contribution across $N=8$ flowers with depth-ordered occlusion:
 
 ```math
-\mathbf{H}_v(x, y) = \sum_{j=1}^{10} \left( \prod_{r=1}^{j-1} \left[ 1 - \mathcal{A}_{1000, r}(x, y) \right] \right) \left( 1 - e^{-1000\left(r - \frac{1}{2}\right)} \mathcal{U}_r(x, y) \right) \mathbf{L}_{v, j}(x, y) + \mathbf{B}_v(x, y)
+\mathbf{H}_v(x, y) = \sum_{j=1}^{8} \left( \prod_{r=1}^{j-1} \left[ 1 - \mathcal{A}_{1000, r}(x, y) \right] \right) \left( 1 - e^{-1000\left(r - \frac{1}{2}\right)} \mathcal{U}_r(x, y) \right) \mathbf{L}_{v, j}(x, y) + \mathbf{B}_v(x, y)
 ```
 
 where $\mathcal{A}_{\kappa, j}(x, y) = \frac{1}{1 + e^{-\kappa(z_{\mathrm{cam}} - z_j(x, y))}}$ is the soft Z-buffer visibility operator and $\mathbf{B}_v(x, y)$ represents the chiaroscuro forest background gradient.
 
 ### 3. Parametric Tepal 2-Manifold
 
-Each tepal $k \in \{0, \dots, 5\}$ of flower $j \in \{1, \dots, 10\}$ is an embedded 2-manifold in $\mathbb{R}^3$ parameterized over $(s, t) \in [0, 1] \times [-1, 1]$:
+Each tepal $k \in \{0, \dots, 5\}$ of flower $j \in \{1, \dots, 8\}$ is an embedded 2-manifold in $\mathbb{R}^3$ parameterized over $(s, t) \in [0, 1] \times [-1, 1]$:
 
 ```math
 \mathbf{S}_{j,k}(s, t) = \mathbf{p}_{j,k}(s) + t\,w_k(s)\,\mathbf{B}_{j,k}(s) + c_k(s, t)\,\mathbf{N}_{j,k}(s)

@@ -76,7 +76,7 @@ def generate_typst_panel_markup() -> str:
 
 $ "rgb" lr(( F lr(( H_0 lr(( frac(m - 1200, 720), frac(721 - n, 720) )) )), thin F lr(( H_1 lr(( frac(m - 1200, 720), frac(721 - n, 720) )) )), thin F lr(( H_2 lr(( frac(m - 1200, 720), frac(721 - n, 720) )) )) )), quad "where" thin F(x) = lr(floor.l 255 lr(( frac(1.25 x (1 + 1.25 x / L_w^2), 1 + 1.25 x) ))^(1 / 2.2) + xi_"CMOS"(m, n) floor.r), "and" $
 
-$ H_v (x, y) = sum_(k=1)^(10) lr(( product_(r=1)^(k-1) (1 - A_r (x, y)) )) lr([ U_k (x, y) L_(v, k) (x, y) + (1 - U_k (x, y)) B_v (x, y) ]), quad v in {0, 1, 2}, $
+$ H_v (x, y) = sum_(k=1)^(8) lr(( product_(r=1)^(k-1) (1 - A_r (x, y)) )) lr([ U_k (x, y) L_(v, k) (x, y) + (1 - U_k (x, y)) B_v (x, y) ]), quad v in {0, 1, 2}, $
 
 $ L_(v, k) (x, y) = bold(c)_("alb", v) (k) I_a A_"ssao" (x, y) + I_"key" lr([ bold(c)_("alb", v) (k) (d_1 S_"key" + t_1) + bold(c)_("ivory", v) b_"sub" + s_1 S_"key" ]) + I_("fill", v) + I_("rim", v), $
 

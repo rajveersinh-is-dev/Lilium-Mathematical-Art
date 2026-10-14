@@ -36,7 +36,7 @@ def main():
     seed = config["random_seed"]
     fov = config["camera"]["fov_degrees"]
     
-    print(f"[1/4] Initializing Bouquet Scene (Seed: {seed}, Flowers: 10, Leaves: 35+)...")
+    print(f"[1/4] Initializing Bouquet Scene (Seed: {seed}, Flowers: 8, Leaves: 35+)...")
     t0 = time.time()
     scene = BouquetScene(seed=seed)
     
