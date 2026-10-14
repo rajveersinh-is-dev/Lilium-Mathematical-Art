@@ -422,39 +422,68 @@ def shade_scene_numba(
             
             if m_id == 1 or m_id == 2:  # Lily Tepals (Inner Petal or Outer Sepal)
                 # 1. Base luminous ivory / pristine botanical white with delicate crystalline warmth
-                r_alb = 0.985 - 0.010 * (1.0 - s)
-                g_alb = 0.980 - 0.008 * (1.0 - s)
-                b_alb = 0.960 - 0.015 * (1.0 - s)
+                r_alb = 0.988 - 0.008 * (1.0 - s)
+                g_alb = 0.984 - 0.006 * (1.0 - s)
+                b_alb = 0.966 - 0.012 * (1.0 - s)
                 
-                # 2. Celadon / chartreuse throat star gradient strictly confined to floral core (s < 0.28)
-                throat_factor = np.exp(-14.0 * (s ** 1.8))
+                # 2. Authentic Botanical Watercolor Rose-Pink Blush along adaxial petal midrib
+                # In real Oriental lilies (e.g. Lilium 'Muscadet' / 'Mona Lisa'), a delicate, radiant
+                # rosy-pink wash flows along the midrib (s in [0.12, 0.78]), softly bleeding outward across
+                # |t| < 0.40 before fading into pure crystalline white ruffled margins (|t| > 0.50).
+                if 0.12 < s < 0.80:
+                    s_pink = (s - 0.12) / 0.68
+                    pink_long = np.sin(np.pi * (s_pink ** 0.82))
+                    
+                    # Sharp median stripe right along midrib (|t| < 0.20)
+                    stripe_k = np.exp(-24.0 * (t * t))
+                    # Soft lateral watercolor wash bleeding out toward margins (|t| < 0.45)
+                    wash_k = np.exp(-6.5 * (t * t))
+                    
+                    if m_id == 1:
+                        # Inner petals: fuller, more radiant rose-pink watercolor wash
+                        stripe_w = 0.80 * stripe_k * pink_long
+                        wash_w = 0.54 * wash_k * pink_long
+                    else:
+                        # Outer sepals: slightly subtler, elegant rose blush
+                        stripe_w = 0.60 * stripe_k * pink_long
+                        wash_w = 0.40 * wash_k * pink_long
+                    
+                    # Blend the soft delicate rose watercolor wash first:
+                    r_alb = r_alb * (1.0 - wash_w) + 0.985 * wash_w
+                    g_alb = g_alb * (1.0 - wash_w) + 0.400 * wash_w
+                    b_alb = b_alb * (1.0 - wash_w) + 0.650 * wash_w
+                    
+                    # Blend the rich, vibrant rose-carmine median stripe on top:
+                    r_alb = r_alb * (1.0 - stripe_w) + 0.965 * stripe_w
+                    g_alb = g_alb * (1.0 - stripe_w) + 0.090 * stripe_w
+                    b_alb = b_alb * (1.0 - stripe_w) + 0.360 * stripe_w
+                
+                # 3. Celadon / chartreuse throat star gradient strictly confined to floral core (s < 0.24)
+                throat_factor = np.exp(-18.0 * (s ** 1.9))
                 r_alb = r_alb * (1.0 - throat_factor) + 0.38 * throat_factor
                 g_alb = g_alb * (1.0 - throat_factor) + 0.88 * throat_factor
                 b_alb = b_alb * (1.0 - throat_factor) + 0.28 * throat_factor
                 
-                # 3. Luminous green nectar furrow canal along midrib (s < 0.42, |t| < 0.22)
-                if s < 0.42 and abs_t < 0.22:
-                    nectar_w = np.exp(-36.0 * (t * t)) * (1.0 - s / 0.42)
-                    r_alb = r_alb * (1.0 - 0.35 * nectar_w) + 0.32 * (0.35 * nectar_w)
-                    g_alb = min(1.0, g_alb * (1.0 - 0.35 * nectar_w) + 0.92 * (0.35 * nectar_w))
-                    b_alb = b_alb * (1.0 - 0.35 * nectar_w) + 0.22 * (0.35 * nectar_w)
-                else:
-                    midrib_pearl = 0.020 * np.exp(-14.0 * (t * t)) * (1.0 - 0.30 * s)
-                    r_alb = min(1.0, r_alb + midrib_pearl)
-                    g_alb = min(1.0, g_alb + midrib_pearl)
-                    b_alb = min(1.0, b_alb + midrib_pearl)
+                # 4. Luminous green nectar furrow canal along midrib (s < 0.38, |t| < 0.18)
+                if s < 0.38 and abs_t < 0.18:
+                    nectar_w = np.exp(-42.0 * (t * t)) * (1.0 - s / 0.38)
+                    r_alb = r_alb * (1.0 - 0.40 * nectar_w) + 0.30 * (0.40 * nectar_w)
+                    g_alb = min(1.0, g_alb * (1.0 - 0.40 * nectar_w) + 0.92 * (0.40 * nectar_w))
+                    b_alb = b_alb * (1.0 - 0.40 * nectar_w) + 0.20 * (0.40 * nectar_w)
                 
-                # 4. Translucency, roughness, and cavity ambient occlusion
+                # 5. Translucency, roughness, and cavity ambient occlusion
                 trans_k = 0.42 + 0.36 * (abs_t ** 1.5) + 0.26 * throat_factor
-                roughness = 0.24 - 0.04 * throat_factor
-                spec_k = 0.36 if m_id == 1 else 0.28
+                roughness = 0.22 - 0.04 * throat_factor
+                spec_k = 0.38 if m_id == 1 else 0.30
                 cavity_ao = 0.48 + 0.52 * (s ** 0.85)
                 if m_id == 2:
                     cavity_ao *= 0.92
                     
-                # 5. 3D Raised Translucent Crystalline Papillae along nectary channels with delicate rose-cinnamon speckles
-                p_cell_s = s * 36.0
-                p_cell_t = t * 28.0
+                # 6. 3D Raised Botanical Papillae & Crimson Nectar Guide Freckles
+                # In real Oriental lilies, raised fleshy papillae cluster along the proximal third
+                # (s in [0.12, 0.42], |t| in [0.03, 0.25]) flanking the green nectary canal.
+                p_cell_s = s * 22.0
+                p_cell_t = t * 18.0
                 i_s = int(p_cell_s)
                 i_t = int(p_cell_t)
                 f_s = p_cell_s - float(i_s) - 0.5
@@ -462,19 +491,19 @@ def shade_scene_numba(
                 cell_hash = np.sin(float(i_s) * 127.1 + float(i_t) * 311.7) * 43758.5453
                 cell_rnd = cell_hash - np.floor(cell_hash)
                 
-                if cell_rnd > 0.42 and 0.08 < s < 0.38 and 0.03 < abs_t < 0.32:
+                if cell_rnd > 0.60 and 0.12 < s < 0.42 and 0.03 < abs_t < 0.25:
                     dist2 = f_s * f_s + f_t * f_t
-                    if dist2 < 0.22:
-                        p_height = (0.22 - dist2) / 0.22
-                        p_w = p_height * 0.22
-                        # Translucent crystalline pearl papillae on Casa Blanca lilies
-                        r_alb = min(1.0, r_alb + 0.05 * p_w)
-                        g_alb = min(1.0, g_alb + 0.05 * p_w)
-                        b_alb = min(1.0, b_alb + 0.03 * p_w)
-                        spec_k += 0.45 * p_w
+                    if dist2 < 0.18:
+                        p_height = (0.18 - dist2) / 0.18
+                        # Organic raised ruby papillae
+                        p_w = p_height * 0.75
+                        r_alb = r_alb * (1.0 - p_w) + 0.72 * p_w
+                        g_alb = g_alb * (1.0 - p_w) + 0.06 * p_w
+                        b_alb = b_alb * (1.0 - p_w) + 0.22 * p_w
+                        spec_k += 0.50 * p_w
                         roughness = max(0.06, roughness - 0.22 * p_w)
                         
-                # 6. Glistening Fresh Water / Dew Droplets
+                # 7. Glistening Fresh Water / Dew Droplets
                 is_droplet = False
                 if s > 0.35 and abs_t < 0.75:
                     d_cell_s = s * 14.0
@@ -495,12 +524,12 @@ def shade_scene_numba(
                             nx += df_s * 1.6
                             ny += df_t * 1.6
                             
-                # 7. Analytical Petal Micro-relief: fibrovascular venation & epidermal papillose luster
+                # 8. Analytical Petal Satin Cuticle & Isotropic Micro-relief
                 if not is_droplet:
-                    vein_slope = np.cos(2.0 * np.pi * 5.0 * t) * (s ** 0.6) * 0.022
-                    micro_grain = np.sin(s * 120.0 + t * 80.0) * 0.012
-                    nx += vein_slope + micro_grain
-                    ny += micro_grain
+                    p_grain = np.sin(75.0 * wx) * np.cos(75.0 * wy) * np.sin(75.0 * wz) * 0.015
+                    nx += p_grain
+                    ny += p_grain
+                    nz += p_grain
                     
                 n_len = max(1e-6, (nx*nx + ny*ny + nz*nz)**0.5)
                 nx /= n_len; ny /= n_len; nz /= n_len
@@ -697,10 +726,11 @@ def shade_scene_numba(
             s1_lobe2 = (n_dot_h1 ** spec_exp2) * (spec_k * 0.6)
             s1 = (s1_lobe1 + s1_lobe2) * (0.04 + 0.96 * fresnel) if d1 > 0.0 else 0.0
             
-            # Soft shadow subsurface light bleed (warm ivory glow inside petal shadows)
-            bounce_r = 0.12 * trans_k * (1.0 - shadow_factor) * 1.05
-            bounce_g = 0.11 * trans_k * (1.0 - shadow_factor) * 0.98
-            bounce_b = 0.08 * trans_k * (1.0 - shadow_factor) * 0.85
+            # Soft shadow subsurface light bleed (warm glow inside petal shadows coupled to albedo)
+            bounce_scale = 0.12 * trans_k * (1.0 - shadow_factor)
+            bounce_r = bounce_scale * r_alb * 1.08
+            bounce_g = bounce_scale * g_alb * 1.02
+            bounce_b = bounce_scale * b_alb * 0.95
             
             # Luminous botanical shadow response:
             # Translucent petals maintain clear contact shadow depth with forward subsurface glow
