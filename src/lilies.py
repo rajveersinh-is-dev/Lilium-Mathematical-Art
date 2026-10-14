@@ -26,7 +26,16 @@ from src.geometry import (
 
 
 class LilyTepal:
-    """Parametric representation of a single lily tepal (petal or sepal)."""
+    """
+    Parametric botanical model of a single Lilium tepal (petal or sepal).
+    
+    Botanical Morphology:
+    - Basal Perianth Tube: For s <= 0.28, the 6 tepals interlock to form a deep chalice/calyx funnel.
+    - Voluptuous Obovate Blade: Expands into broad, curved blade with rounded shoulders (peak s ≈ 0.54).
+    - Recurved Reflex: Tips arch backward gracefully (sepals reflex strongly by ~90°, petals gently).
+    - Romantic Wavy Margins: Multi-harmonic undulations along tepal margins.
+    - True 3D Cross-Section: Concave throat cup, convex dorsal keel, ventral nectary furrow, zero zero-normals.
+    """
     def __init__(
         self,
         index: int,
@@ -41,8 +50,8 @@ class LilyTepal:
         opening: float = 1.0,
         angle_jitter: float = 0.0,
         width_harmonic: float = 0.35,
-        ruffle_amplitude: float = 0.018,
-        ruffle_freq: float = 4.0,
+        ruffle_amplitude: float = 0.012,
+        ruffle_freq: float = 1.35,
         phase: float = 0.0
     ):
         self.index = index
@@ -75,29 +84,28 @@ class LilyTepal:
         """
         s_vals = np.linspace(0.0, 1.0, n_s)
         t_vals = np.linspace(-1.0, 1.0, n_t)
-        
-        # Grid of s and t
         S, T = np.meshgrid(s_vals, t_vals, indexing='ij')
         
         dir_x = np.cos(self.base_angle)
         dir_y = np.sin(self.base_angle)
         
-        whorl_z = 0.02 * self.length if self.is_inner else -0.02 * self.length
+        whorl_z = 0.024 * self.length if self.is_inner else -0.024 * self.length
         
         if self.is_bud:
-            # Closed or swelling bud: tepals form a fusiform tapered spindle
-            r_s = self.length * (0.04 * s_vals + 0.16 * self.opening * np.sin(np.pi * s_vals))
-            z_s = self.length * (0.95 * s_vals) + whorl_z
+            # Closed/swelling bud: tepals form a fusiform tapered spindle with organic spine curve
+            curve_s = 0.040 * self.length * (s_vals ** 1.8)
+            r_s = self.length * (0.045 * s_vals + 0.155 * self.opening * np.sin(np.pi * s_vals))
+            z_s = self.length * (0.96 * s_vals) + whorl_z
             
             # Width profile clasping adjacent tepals: circumf / 6
-            w_profile = (np.pi / 3.0) * r_s * 1.08
+            w_profile = (np.pi / 3.0) * r_s * 1.06
             W = w_profile[:, None] * T
             
             # Spine tangent
             ds = 0.001
             s_plus = np.clip(s_vals + ds, 0.0, 1.0)
-            r_plus = self.length * (0.04 * s_plus + 0.16 * self.opening * np.sin(np.pi * s_plus))
-            z_plus = self.length * (0.95 * s_plus) + whorl_z
+            r_plus = self.length * (0.045 * s_plus + 0.155 * self.opening * np.sin(np.pi * s_plus))
+            z_plus = self.length * (0.96 * s_plus) + whorl_z
             
             tan_x = (r_plus - r_s) * dir_x / ds
             tan_y = (r_plus - r_s) * dir_y / ds
@@ -109,62 +117,115 @@ class LilyTepal:
             binormals = normalize(b0[None, :] - proj * spine_tan, axis=-1)
             normals_spine = normalize(np.cross(spine_tan, binormals), axis=-1)
             
-            # Curved convex shell for bud
-            c_elev = 0.03 * self.length * (1.0 - T ** 2)
+            # Convex outer shell for bud
+            c_elev = 0.032 * self.length * (1.0 - T ** 2)
+            
+            spine_x = r_s * dir_x + curve_s * np.cos(self.base_angle)
+            spine_y = r_s * dir_y + curve_s * np.sin(self.base_angle)
             
         else:
-            # Open or partially open lily perianth
-            # Radial distance: narrow throat tube expanding into broad flared star
-            r_s = self.length * (0.06 * s_vals + 0.78 * self.opening * (s_vals ** 1.45))
+            # TRUE BOTANICAL LILIUM PERIANTH:
+            # 1. Radial expansion r(s):
+            # Basal perianth tube: narrow and fused for s <= 0.22, flaring generously in trumpet bell
+            r_tube = (0.028 + 0.10 * s_vals) * self.length
+            flare_s = np.maximum(0.0, (s_vals - 0.22) / 0.78)
+            r_flare = 0.72 * self.length * self.opening * (flare_s ** 1.25)
+            r_s = r_tube + r_flare
             
-            # Z axis: chalice tube projecting forward, then tips reflexing backward
-            z_tube = 0.32 * self.length * s_vals
-            z_refl = self.reflex_amount * (np.maximum(0.0, s_vals - 0.38) ** 1.85)
-            z_s = z_tube - z_refl + self.curl_z * (s_vals ** 2) + whorl_z
+            # Subtle organic lateral petal swirl
+            twist_amp = (0.06 if self.is_inner else -0.05)
+            angle_s = self.base_angle + twist_amp * (s_vals ** 1.5)
+            dir_x = np.cos(angle_s)
+            dir_y = np.sin(angle_s)
             
-            # Spine tangent via finite differences
+            # 2. Longitudinal Z trajectory:
+            # Deep throat funnel receding into the green calyx tube
+            z_throat = -0.05 * self.length * (np.maximum(0.0, 1.0 - s_vals / 0.22) ** 1.5)
+            z_cup = z_throat + 0.44 * self.length * np.sin(0.5 * np.pi * (s_vals ** 0.88))
+            
+            # Backward recurvature (reflexing):
+            # Inner petals reflex gently (~30°); outer sepals reflex gracefully (~70°) in a smooth sweep
+            if self.is_inner:
+                refl_start = 0.58
+                refl_amount = 0.38 * self.reflex_amount
+                refl_power = 1.70
+            else:
+                refl_start = 0.44
+                refl_amount = 1.10 * self.reflex_amount
+                refl_power = 1.55
+                
+            z_refl = refl_amount * (np.maximum(0.0, (s_vals - refl_start) / (1.0 - refl_start)) ** refl_power)
+            z_s = z_cup - z_refl + self.curl_z * (s_vals ** 2) + whorl_z
+            
+            # Spine tangent frame
             ds = 0.001
             s_plus = np.clip(s_vals + ds, 0.0, 1.0)
-            r_plus = self.length * (0.06 * s_plus + 0.78 * self.opening * (s_plus ** 1.45))
-            z_tube_p = 0.32 * self.length * s_plus
-            z_refl_p = self.reflex_amount * (np.maximum(0.0, s_plus - 0.38) ** 1.85)
-            z_plus = z_tube_p - z_refl_p + self.curl_z * (s_plus ** 2) + whorl_z
+            r_tube_p = (0.028 + 0.10 * s_plus) * self.length
+            flare_s_p = np.maximum(0.0, (s_plus - 0.22) / 0.78)
+            r_plus = r_tube_p + 0.72 * self.length * self.opening * (flare_s_p ** 1.25)
+            angle_s_p = self.base_angle + twist_amp * (s_plus ** 1.5)
+            dir_x_p = np.cos(angle_s_p)
+            dir_y_p = np.sin(angle_s_p)
             
-            tan_x = (r_plus - r_s) * dir_x / ds
-            tan_y = (r_plus - r_s) * dir_y / ds
+            z_throat_p = -0.05 * self.length * (np.maximum(0.0, 1.0 - s_plus / 0.22) ** 1.5)
+            z_cup_p = z_throat_p + 0.44 * self.length * np.sin(0.5 * np.pi * (s_plus ** 0.88))
+            z_refl_p = refl_amount * (np.maximum(0.0, (s_plus - refl_start) / (1.0 - refl_start)) ** refl_power)
+            z_plus = z_cup_p - z_refl_p + self.curl_z * (s_plus ** 2) + whorl_z
+            
+            tan_x = (r_plus * dir_x_p - r_s * dir_x) / ds
+            tan_y = (r_plus * dir_y_p - r_s * dir_y) / ds
             tan_z = (z_plus - z_s) / ds
             spine_tan = normalize(np.stack([tan_x, tan_y, tan_z], axis=-1))
             
-            b0 = np.array([-np.sin(self.base_angle), np.cos(self.base_angle), 0.0])
-            proj = np.sum(spine_tan * b0[None, :], axis=-1, keepdims=True)
-            binormals = normalize(b0[None, :] - proj * spine_tan, axis=-1)
+            b0 = np.stack([-np.sin(angle_s), np.cos(angle_s), np.zeros_like(angle_s)], axis=-1)
+            proj = np.sum(spine_tan * b0, axis=-1, keepdims=True)
+            binormals = normalize(b0 - proj * spine_tan, axis=-1)
             normals_spine = normalize(np.cross(spine_tan, binormals), axis=-1)
             
-            # Width profile: organic lily unguis expanding into broad blade
-            w_profile = petal_width_profile(
-                s_vals,
-                scale=self.max_width,
-                alpha=1.20,
-                beta=0.88,
-                gamma1=self.width_harmonic,
-                gamma2=-0.12,
-                phi=self.phase
-            )
+            # 3. Voluptuous Obovate Width Profile:
+            # Narrow claw at base, expansive rounded midsection, soft acute tip
+            s_mid = np.clip(s_vals, 0.0, 1.0)
+            if self.is_inner:
+                # Wide, voluptuous obovate inner petal: peaks at s ≈ 0.68-0.72
+                p_shape = (s_mid ** 1.35) * ((1.0 - s_mid) ** 0.55)
+                p_peak = (0.7105 ** 1.35) * (0.2895 ** 0.55)
+            else:
+                # Slender, recurving elliptic outer sepal: peaks at s ≈ 0.62-0.65
+                p_shape = (s_mid ** 1.22) * ((1.0 - s_mid) ** 0.65)
+                p_peak = (0.6524 ** 1.22) * (0.3476 ** 0.65)
+                
+            blade_w = self.max_width * (p_shape / p_peak)
+            claw_w = 0.024 * self.length * (1.0 - s_mid ** 0.6)
+            tip_w = 0.016 * self.length * ((1.0 - s_mid) ** 0.8)
+            w_base = claw_w + blade_w + tip_w
+            
+            # Romantic wavy margin undulation (gentle broad wave along outer blade)
+            ruffle_envelope = (s_vals ** 1.4) * (0.045 if self.is_inner else 0.022) * self.max_width
+            w_margin = ruffle_envelope * np.sin(2.0 * np.pi * self.ruffle_freq * s_vals + self.phase)
+            w_profile = np.maximum(0.008 * self.length * (1.0 - 0.7 * s_vals), w_base + w_margin)
             W = w_profile[:, None] * T
             
-            # Elevation: groove, arch, and edge ruffles
-            c_elev = petal_cross_section_curvature(
-                S,
-                T,
-                groove_depth=0.030 * self.length,
-                arch_height=0.038 * self.length,
-                margin_undulation=self.ruffle_amplitude * self.length,
-                undulation_freq=self.ruffle_freq,
-                margin_phase=self.phase
+            # 4. Botanical 3D Cross-Section Architecture:
+            # - Basal concave cup: inside throat (s < 0.35)
+            throat_cup = -0.025 * self.length * np.exp(-12.0 * (s_vals ** 1.8))[:, None] * (1.0 - T ** 2)
+            # - Concave inner midrib camber: depression along center (T=0) creating an authentic boat-shaped petal
+            midrib_camber = -0.022 * self.length * (np.sin(np.pi * (s_vals ** 0.85)) ** 1.2)[:, None] * (1.0 - T ** 2)
+            # - Ventral nectary furrow
+            furrow_mask = (s_vals > 0.05) & (s_vals < 0.44)
+            furrow_s = np.where(furrow_mask, np.sin(np.pi * (s_vals - 0.05) / 0.39), 0.0)
+            ventral_furrow = -0.014 * self.length * furrow_s[:, None] * np.exp(-32.0 * (T ** 2))
+            # - Vertical margin waves
+            edge_ruffle = (
+                self.ruffle_amplitude
+                * self.length
+                * (S ** 1.4)
+                * (T ** 2)
+                * np.sin(2.0 * np.pi * self.ruffle_freq * S + self.phase)
             )
+            c_elev = throat_cup + midrib_camber + ventral_furrow + edge_ruffle
             
-        spine_x = r_s * dir_x
-        spine_y = r_s * dir_y
+            spine_x = r_s * dir_x
+            spine_y = r_s * dir_y
         
         # 3D surface vertices
         vx = spine_x[:, None] + W * binormals[:, 0, None] + c_elev * normals_spine[:, 0, None]
@@ -227,26 +288,38 @@ class LilyFlower:
     def _build_tepals(self):
         """Construct exactly 6 tepals arranged in two trimerous whorls."""
         if self.is_bud:
-            base_length = 0.62 * self.scale
-            inner_width = 0.07 * base_length
-            outer_width = 0.06 * base_length
-            throat_depth = 0.0
-            reflex = 0.0
-        else:
-            base_length = 0.74 * self.scale
-            # Authentic botanical aspect ratio with natural overlap
-            inner_width = 0.22 * base_length * self.opening
-            outer_width = 0.16 * base_length * self.opening
-            throat_depth = 0.32 * base_length
-            reflex = 0.44 * base_length * (self.opening ** 1.5)
+            base_length = 0.70 * self.scale
+            for i in range(6):
+                angle = i * (np.pi / 3.0)
+                tepal = LilyTepal(
+                    index=i,
+                    is_inner=(i % 2 == 0),
+                    base_angle=angle,
+                    length=base_length,
+                    max_width=0.10 * base_length,
+                    throat_depth=0.0,
+                    reflex_amount=0.0,
+                    curl_z=0.0,
+                    is_bud=True,
+                    opening=self.opening,
+                    ruffle_amplitude=0.0
+                )
+                self.tepals.append(tepal)
+            return
+
+        base_length = 0.68 * self.scale
+        inner_width = 0.235 * base_length * (0.58 + 0.42 * self.opening)
+        outer_width = 0.138 * base_length * (0.58 + 0.42 * self.opening)
+        throat_depth = 0.44 * base_length
+        reflex = 0.34 * base_length * (self.opening ** 1.2)
         
         # 3 Inner Tepals (Petals) at 0°, 120°, 240°
         for i in range(3):
             angle = i * (2.0 * np.pi / 3.0)
-            angle_jitter = self.rng.uniform(-0.04, 0.04)
-            width_var = self.rng.uniform(0.96, 1.04)
-            refl_var = self.rng.uniform(0.94, 1.06)
-            ruffle_amp = 0.026 * self.rng.uniform(0.85, 1.15)
+            angle_jitter = self.rng.uniform(-0.03, 0.03)
+            width_var = self.rng.uniform(0.97, 1.03)
+            refl_var = self.rng.uniform(0.95, 1.05)
+            ruffle_amp = 0.012 * self.rng.uniform(0.90, 1.10)
             
             tepal = LilyTepal(
                 index=i,
@@ -256,13 +329,13 @@ class LilyFlower:
                 max_width=inner_width * width_var,
                 throat_depth=throat_depth,
                 reflex_amount=reflex * refl_var,
-                curl_z=-0.05 * self.scale,
-                is_bud=self.is_bud,
+                curl_z=-0.02 * self.scale,
+                is_bud=False,
                 opening=self.opening,
                 angle_jitter=angle_jitter,
-                width_harmonic=self.rng.uniform(0.32, 0.42),
+                width_harmonic=self.rng.uniform(0.30, 0.38),
                 ruffle_amplitude=ruffle_amp,
-                ruffle_freq=self.rng.uniform(3.5, 4.5),
+                ruffle_freq=self.rng.uniform(1.25, 1.55),
                 phase=self.rng.uniform(0.0, 2.0 * np.pi)
             )
             self.tepals.append(tepal)
@@ -270,26 +343,26 @@ class LilyFlower:
         # 3 Outer Tepals (Sepals) at 60°, 180°, 300°
         for i in range(3):
             angle = np.pi / 3.0 + i * (2.0 * np.pi / 3.0)
-            angle_jitter = self.rng.uniform(-0.04, 0.04)
-            width_var = self.rng.uniform(0.95, 1.05)
-            refl_var = self.rng.uniform(0.94, 1.06)
-            ruffle_amp = 0.020 * self.rng.uniform(0.85, 1.15)
+            angle_jitter = self.rng.uniform(-0.03, 0.03)
+            width_var = self.rng.uniform(0.96, 1.04)
+            refl_var = self.rng.uniform(0.95, 1.05)
+            ruffle_amp = 0.006 * self.rng.uniform(0.90, 1.10)
             
             tepal = LilyTepal(
                 index=3 + i,
                 is_inner=False,
                 base_angle=angle,
-                length=base_length * 1.03 * self.rng.uniform(0.98, 1.02),
+                length=base_length * 1.04 * self.rng.uniform(0.98, 1.02),
                 max_width=outer_width * width_var,
                 throat_depth=throat_depth,
-                reflex_amount=reflex * refl_var * 1.04,
-                curl_z=-0.04 * self.scale,
-                is_bud=self.is_bud,
+                reflex_amount=reflex * refl_var * 1.10,
+                curl_z=-0.03 * self.scale,
+                is_bud=False,
                 opening=self.opening,
                 angle_jitter=angle_jitter,
-                width_harmonic=self.rng.uniform(0.30, 0.40),
+                width_harmonic=self.rng.uniform(0.26, 0.34),
                 ruffle_amplitude=ruffle_amp,
-                ruffle_freq=self.rng.uniform(3.5, 4.5),
+                ruffle_freq=self.rng.uniform(1.25, 1.55),
                 phase=self.rng.uniform(0.0, 2.0 * np.pi)
             )
             self.tepals.append(tepal)
@@ -312,8 +385,6 @@ class LilyFlower:
         # 1. Generate Tepals
         for tepal in self.tepals:
             t_verts, t_faces, t_normals, t_uvs = tepal.generate_mesh(n_s=56, n_t=27)
-            # Transform from local flower coordinates to world space
-            # World = Center + RotMatrix @ Local
             world_verts = self.center + (self.rot_matrix @ t_verts.T).T
             world_normals = (self.rot_matrix @ t_normals.T).T
             
@@ -322,45 +393,45 @@ class LilyFlower:
             all_normals.append(world_normals)
             all_uvs.append(t_uvs)
             
-            mat_id = 1 if tepal.is_inner else 2  # 1 = inner petal, 2 = outer sepal
+            if self.is_bud:
+                mat_id = 8  # Bud jade/ivory
+            else:
+                mat_id = 1 if tepal.is_inner else 2
             all_mat_ids.append(np.full(len(t_verts), mat_id, dtype=np.int32))
             vert_offset += len(t_verts)
             
-        # 2. Generate Reproductive Organs (only if opening > 0.3)
-        if self.opening > 0.3 and not self.is_bud:
-            # 6 Stamens (Filaments + Golden Anthers)
-            filament_len = 0.40 * self.scale * self.opening
-            anther_len = 0.096 * self.scale
-            anther_radius = 0.016 * self.scale
+        # 2. Generate Reproductive Organs (only if opening > 0.4 and not bud)
+        if self.opening > 0.4 and not self.is_bud:
+            filament_len = 0.44 * self.scale * (self.opening ** 1.35)
+            anther_len = 0.120 * self.scale
+            anther_radius = 0.0085 * self.scale
             
             for k in range(6):
-                # Angle spaced between tepals
-                ang = k * (np.pi / 3.0) + np.pi / 6.0 + self.rng.uniform(-0.08, 0.08)
-                # Filament curves outward from flower center
-                rad_disp = 0.17 * self.scale * self.opening
-                fil_tip_local = np.array([
-                    rad_disp * np.cos(ang),
-                    rad_disp * np.sin(ang),
-                    filament_len * self.rng.uniform(0.95, 1.05)
-                ])
-                fil_tip_world = self.center + self.rot_matrix @ fil_tip_local
-                fil_base_world = self.center + self.rot_matrix @ np.array([0.0, 0.0, -0.05 * self.scale])
+                ang = k * (np.pi / 3.0) + np.pi / 6.0 + self.rng.uniform(-0.10, 0.10)
                 
                 # Filament tube mesh (cylinder with 8 radial slices, 10 height steps)
+                # True botanical trumpet stamen: slender filament arching gracefully from throat
                 u_steps = np.linspace(0.0, 1.0, 10)
                 fil_verts = []
                 for u in u_steps:
-                    # Curved spine
-                    curv = 0.06 * np.sin(np.pi * u)
-                    spine_pt = (1.0 - u) * fil_base_world + u * fil_tip_world + self.rot_matrix @ np.array([curv * np.cos(ang), curv * np.sin(ang), 0.0])
-                    # Circular slice
-                    radius = (0.005 - 0.0015 * u) * self.scale
+                    r_u = 0.20 * self.scale * (self.opening ** 1.35) * (np.sin(0.5 * np.pi * u) ** 1.15)
+                    z_u = (0.04 + 0.38 * (self.opening ** 1.25) * (u ** 0.88)) * self.scale
+                    sag = -0.010 * self.scale * (u ** 1.8)
+                    spine_local = np.array([r_u * np.cos(ang), r_u * np.sin(ang) + sag, z_u])
+                    spine_world = self.center + self.rot_matrix @ spine_local
+                    radius = (0.0044 - 0.0014 * u) * self.scale
                     for phi_idx in range(8):
                         phi = phi_idx * (2.0 * np.pi / 8.0)
                         radial_vec = np.array([np.cos(phi), np.sin(phi), 0.0])
-                        fil_verts.append(spine_pt + self.rot_matrix @ (radial_vec * radius))
+                        fil_verts.append(spine_world + self.rot_matrix @ (radial_vec * radius))
                         
                 fil_verts = np.array(fil_verts, dtype=np.float64)
+                r_tip = 0.20 * self.scale * (self.opening ** 1.35)
+                z_tip = (0.04 + 0.38 * (self.opening ** 1.25)) * self.scale
+                sag_tip = -0.010 * self.scale
+                fil_tip_local = np.array([r_tip * np.cos(ang), r_tip * np.sin(ang) + sag_tip, z_tip])
+                fil_tip_world = self.center + self.rot_matrix @ fil_tip_local
+                
                 fil_faces = []
                 for i in range(9):
                     for j in range(8):
@@ -379,11 +450,18 @@ class LilyFlower:
                 all_faces.append(fil_faces + vert_offset)
                 all_normals.append(fil_normals)
                 all_uvs.append(fil_uvs)
-                all_mat_ids.append(np.full(len(fil_verts), 3, dtype=np.int32))  # 3 = filament (pale green)
+                all_mat_ids.append(np.full(len(fil_verts), 3, dtype=np.int32))  # 3 = filament (pale celery green)
                 vert_offset += len(fil_verts)
                 
-                # Anther at filament tip: versatile 2-lobed thecae with dehiscence sulcus
-                anther_dir = normalize(np.array([-np.sin(ang), np.cos(ang), self.rng.uniform(-0.25, 0.25)]))
+                # Versatile Anther at filament tip: organic 3D poise poised perpendicular to filament
+                yaw = self.rng.uniform(-0.55, 0.55)
+                pitch = self.rng.uniform(-0.55, 0.55)
+                roll = self.rng.uniform(-0.35, 0.35)
+                anther_dir = normalize(np.array([
+                    -np.sin(ang) + yaw,
+                    np.cos(ang) + pitch,
+                    0.25 * np.cos(ang) + roll
+                ]))
                 anther_ortho1 = normalize(np.cross(anther_dir, np.array([0.0, 0.0, 1.0])))
                 anther_ortho2 = normalize(np.cross(anther_dir, anther_ortho1))
                 
@@ -395,19 +473,17 @@ class LilyFlower:
                 for lat_idx in range(n_lat):
                     lat_frac = lat_idx / (n_lat - 1)
                     lat = -np.pi / 2.0 + lat_frac * np.pi
-                    # Bananoid gentle curvature along length
-                    curve_offset = 0.008 * self.scale * np.cos(lat)
+                    # Subtle natural crescent curvature of anther
+                    crescent_curve = -0.0028 * self.scale * (1.0 - np.cos(lat))
                     
                     for lon_idx in range(n_lon):
                         lon_frac = lon_idx / n_lon
                         lon = lon_idx * (2.0 * np.pi / n_lon)
-                        
-                        # Two-lobed pollen thecae profile: indentation at lon = 0 and lon = pi
-                        theca_mod = 1.0 + 0.32 * np.cos(2.0 * lon)
+                        theca_mod = 1.0 + 0.35 * np.cos(2.0 * lon)
                         rad_curr = anther_radius * theca_mod * np.cos(lat)
                         
                         x_e = (anther_len * 0.5) * np.sin(lat)
-                        y_e = rad_curr * np.cos(lon) + curve_offset
+                        y_e = rad_curr * np.cos(lon) + crescent_curve
                         z_e = rad_curr * np.sin(lon)
                         
                         disp_local = x_e * anther_dir + y_e * anther_ortho1 + z_e * anther_ortho2
@@ -435,13 +511,13 @@ class LilyFlower:
                 all_faces.append(anther_faces + vert_offset)
                 all_normals.append(anther_normals)
                 all_uvs.append(anther_uvs)
-                all_mat_ids.append(np.full(len(anther_verts), 4, dtype=np.int32))  # 4 = anther (golden pollen)
+                all_mat_ids.append(np.full(len(anther_verts), 4, dtype=np.int32))  # 4 = anther (velvety cinnamon pollen)
                 vert_offset += len(anther_verts)
                 
-            # Central Pistil & 3-Lobed Stigma
-            pistil_len = 0.44 * self.scale * self.opening
-            stigma_world = self.center + self.rot_matrix @ np.array([0.02 * self.scale, 0.01 * self.scale, pistil_len])
-            pistil_base = self.center + self.rot_matrix @ np.array([0.0, 0.0, -0.06 * self.scale])
+            # Central Pistil & 3-Lobed Stigma (Extends elegantly beyond stamens)
+            pistil_len = (0.06 + 0.44 * (self.opening ** 1.25)) * self.scale
+            stigma_world = self.center + self.rot_matrix @ np.array([0.008 * self.scale, 0.006 * self.scale, pistil_len])
+            pistil_base = self.center + self.rot_matrix @ np.array([0.0, 0.0, 0.05 * self.scale])
             
             # Style tube
             pistil_verts = []
@@ -449,7 +525,7 @@ class LilyFlower:
             n_style_steps = 12
             for u in np.linspace(0.0, 1.0, n_style_steps):
                 center_pt = (1.0 - u) * pistil_base + u * stigma_world
-                r_pis = (0.0075 - 0.0018 * u) * self.scale
+                r_pis = (0.0065 - 0.0018 * u) * self.scale
                 for phi_idx in range(8):
                     phi = phi_idx * (2.0 * np.pi / 8.0)
                     rad_v = np.array([np.cos(phi), np.sin(phi), 0.0])
@@ -469,8 +545,8 @@ class LilyFlower:
             
             # 3-Lobed Swollen Stigma Pad at style tip
             n_stigma_radial = 18
-            stigma_rad_base = 0.018 * self.scale
-            stigma_tip_center = stigma_world + self.rot_matrix @ np.array([0.0, 0.0, 0.012 * self.scale])
+            stigma_rad_base = 0.016 * self.scale
+            stigma_tip_center = stigma_world + self.rot_matrix @ np.array([0.0, 0.0, 0.008 * self.scale])
             
             # Center vertex of stigma
             stigma_center_idx = len(pistil_verts)
@@ -480,8 +556,8 @@ class LilyFlower:
             for j in range(n_stigma_radial):
                 theta = j * (2.0 * np.pi / n_stigma_radial)
                 # 3-lobed clover morphology
-                r_lobe = stigma_rad_base * (1.0 + 0.42 * np.cos(3.0 * theta))
-                lobe_disp = np.array([r_lobe * np.cos(theta), r_lobe * np.sin(theta), -0.004 * self.scale])
+                r_lobe = stigma_rad_base * (1.0 + 0.38 * np.cos(3.0 * theta))
+                lobe_disp = np.array([r_lobe * np.cos(theta), r_lobe * np.sin(theta), -0.003 * self.scale])
                 pistil_verts.append(stigma_world + self.rot_matrix @ lobe_disp)
                 pistil_uvs_list.append([1.0, j / n_stigma_radial])
                 
