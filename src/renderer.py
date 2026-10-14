@@ -420,46 +420,55 @@ def shade_scene_numba(
             trans_k = 0.25
             cavity_ao = 1.0
             
-            if m_id == 1 or m_id == 2:  # Inner Lily Petal or Outer Sepal
-                # Base pristine ivory white with subtle cream warmth
-                r_alb = 0.985; g_alb = 0.980; b_alb = 0.965
+            if m_id == 1 or m_id == 2:  # Lily Tepals (Inner Petal or Outer Sepal)
+                # 1. Base ivory tone with subtle organic warmth
+                r_alb = 0.985 - 0.03 * (1.0 - s)
+                g_alb = 0.982 - 0.02 * (1.0 - s)
+                b_alb = 0.965 - 0.05 * (1.0 - s)
                 
-                # Vivid celadon / chartreuse throat star gradient
-                throat_factor = np.exp(-7.5 * (s ** 1.4))
-                r_alb = r_alb * (1.0 - throat_factor) + 0.52 * throat_factor
-                g_alb = g_alb * (1.0 - throat_factor) + 0.84 * throat_factor
-                b_alb = b_alb * (1.0 - throat_factor) + 0.28 * throat_factor
+                # 2. Celadon / chartreuse throat star gradient
+                throat_factor = np.exp(-7.2 * (s ** 1.35))
+                r_alb = r_alb * (1.0 - throat_factor) + 0.48 * throat_factor
+                g_alb = g_alb * (1.0 - throat_factor) + 0.86 * throat_factor
+                b_alb = b_alb * (1.0 - throat_factor) + 0.26 * throat_factor
                 
-                # Midrib translucent groove running longitudinally
-                midrib = (1.0 - 0.45 * s) * np.exp(-26.0 * (t * t))
-                r_alb = r_alb * (1.0 - 0.45 * midrib) + 0.62 * (0.45 * midrib)
-                g_alb = g_alb * (1.0 - 0.45 * midrib) + 0.84 * (0.45 * midrib)
-                b_alb = b_alb * (1.0 - 0.45 * midrib) + 0.38 * (0.45 * midrib)
+                # 3. Midrib groove running longitudinally
+                midrib = (1.0 - 0.40 * s) * np.exp(-24.0 * (t * t))
+                r_alb = r_alb * (1.0 - 0.45 * midrib) + 0.58 * (0.45 * midrib)
+                g_alb = g_alb * (1.0 - 0.45 * midrib) + 0.85 * (0.45 * midrib)
+                b_alb = b_alb * (1.0 - 0.45 * midrib) + 0.35 * (0.45 * midrib)
                 
-                # Longitudinal fibrovascular veins
-                vein_mod = 1.0
+                # 4. Multi-scale fibrovascular vein system (7 conduits)
+                vein_relief = 0.0
+                vein_green = 0.0
                 for k in range(1, 5):
-                    tau = 0.22 * float(k) * (1.0 - 0.15 * s)
-                    vein_mod += 0.04 * np.exp(-((abs_t - tau) ** 2) / 0.002)
-                r_alb *= (0.97 + 0.03 * vein_mod)
-                g_alb *= (0.97 + 0.03 * vein_mod)
-                b_alb *= (0.97 + 0.03 * vein_mod)
+                    tau = 0.19 * float(k) * (1.0 - 0.12 * s)
+                    d_vein = abs_t - tau
+                    v_profile = np.exp(-(d_vein * d_vein) / 0.0018)
+                    vein_green += 0.035 * v_profile * (1.0 - 0.4 * s)
+                    vein_relief += -0.045 * (d_vein / 0.04) * v_profile
                 
-                # Translucency and baseline material properties
-                trans_k = 0.28 + 0.36 * (abs_t ** 2) + 0.30 * throat_factor
-                roughness = 0.32 - 0.06 * throat_factor
-                spec_k = 0.28 if m_id == 1 else 0.26
-                cavity_ao = 0.52 + 0.48 * (s ** 0.85)
-                if m_id == 2:
-                    cavity_ao *= 0.90
-
-                # Delicate soft pink blush in the papillae zone
-                blush = 0.14 * np.exp(-22.0 * ((s - 0.25) ** 2)) * np.exp(-14.0 * (t * t))
+                micro_vein = 0.015 * np.sin(58.0 * t + 8.0 * s) * (1.0 - 0.3 * s)
+                r_alb = max(0.0, r_alb - 0.04 * vein_green + micro_vein)
+                g_alb = min(1.0, g_alb + 0.05 * vein_green + micro_vein)
+                b_alb = max(0.0, b_alb - 0.03 * vein_green + micro_vein)
+                nx += (1.0 if t >= 0.0 else -1.0) * vein_relief * 0.35
+                
+                # 5. Delicate soft pink blush in the papillae zone
+                blush = 0.15 * np.exp(-20.0 * ((s - 0.24) ** 2)) * np.exp(-12.0 * (t * t))
                 r_alb = r_alb * (1.0 - blush) + 0.98 * blush
-                g_alb = g_alb * (1.0 - blush) + 0.74 * blush
-                b_alb = b_alb * (1.0 - blush) + 0.80 * blush
-
-                # 3D Raised Carmine Papillae near throat (nectariferous nodules)
+                g_alb = g_alb * (1.0 - blush) + 0.72 * blush
+                b_alb = b_alb * (1.0 - blush) + 0.79 * blush
+                
+                # 6. Baseline material properties
+                trans_k = 0.26 + 0.38 * (abs_t ** 1.8) + 0.32 * throat_factor
+                roughness = 0.32 - 0.08 * throat_factor
+                spec_k = 0.30 if m_id == 1 else 0.27
+                cavity_ao = 0.50 + 0.50 * (s ** 0.85)
+                if m_id == 2:
+                    cavity_ao *= 0.88
+                    
+                # 7. 3D Raised Carmine Papillae near throat
                 p_cell_s = s * 32.0
                 p_cell_t = t * 24.0
                 i_s = int(p_cell_s)
@@ -469,68 +478,131 @@ def shade_scene_numba(
                 cell_hash = np.sin(float(i_s) * 127.1 + float(i_t) * 311.7) * 43758.5453
                 cell_rnd = cell_hash - np.floor(cell_hash)
                 
-                if cell_rnd > 0.42 and 0.09 < s < 0.45 and 0.03 < abs_t < 0.40:
+                if cell_rnd > 0.38 and 0.07 < s < 0.45 and 0.02 < abs_t < 0.40:
                     dist2 = f_s * f_s + f_t * f_t
-                    if dist2 < 0.20:
-                        p_height = (0.20 - dist2) / 0.20
-                        # 3D micro-normal perturbation for papilla highlight & shadow
-                        nx += f_t * p_height * 0.75
-                        ny += f_s * p_height * 0.75
-                        fade = (0.45 - s) / 0.36 * (1.0 - abs_t / 0.40)
-                        p_w = p_height * fade * 0.95
-                        r_alb = r_alb * (1.0 - p_w) + 0.78 * p_w
-                        g_alb = g_alb * (1.0 - p_w) + 0.12 * p_w
-                        b_alb = b_alb * (1.0 - p_w) + 0.20 * p_w
-                        spec_k += 0.30 * p_w
-                        roughness = max(0.08, roughness - 0.20 * p_w)
+                    if dist2 < 0.26:
+                        p_height = (0.26 - dist2) / 0.26
+                        nx += f_t * p_height * 0.95
+                        ny += f_s * p_height * 0.95
+                        fade = ((0.45 - s) / 0.38) * (1.0 - abs_t / 0.40)
+                        p_w = p_height * (0.35 + 0.65 * fade)
+                        r_alb = r_alb * (1.0 - p_w) + 0.76 * p_w
+                        g_alb = g_alb * (1.0 - p_w) + 0.08 * p_w
+                        b_alb = b_alb * (1.0 - p_w) + 0.16 * p_w
+                        spec_k += 0.35 * p_w
+                        roughness = max(0.08, roughness - 0.22 * p_w)
+                        if dist2 > 0.16:
+                            cavity_ao *= 0.80
                         
-                # Micro-vein striations + epidermal cell texture
-                d_vein = 0.030 * np.sin(48.0 * t) * (1.0 - s * 0.5)
-                d_cell = 0.015 * (np.sin(160.0 * s + 60.0 * t) + np.cos(90.0 * s - 130.0 * t))
-                nx += d_vein * 0.16 + d_cell * 0.10
-                ny += d_cell * 0.10
-                n_len = max(1e-6, (nx*nx + ny*ny + nz*nz)**0.5)
-                nx /= n_len; ny /= n_len; nz /= n_len
+                # 8. Golden Pollen Dust fall on inner petal base
+                if 0.04 < s < 0.32 and abs_t < 0.26:
+                    pollen_hash = np.sin(float(px) * 71.3 + float(py) * 97.7) * 37482.1
+                    pollen_rnd = pollen_hash - np.floor(pollen_hash)
+                    if pollen_rnd > 0.91:
+                        dust_int = (pollen_rnd - 0.91) / 0.09 * (1.0 - s / 0.32)
+                        r_alb = r_alb * (1.0 - dust_int) + 0.94 * dust_int
+                        g_alb = g_alb * (1.0 - dust_int) + 0.54 * dust_int
+                        b_alb = b_alb * (1.0 - dust_int) + 0.04 * dust_int
+                        roughness = min(0.70, roughness + 0.3 * dust_int)
+                        
+                # 9. Glistening Fresh Water / Dew Droplets
+                is_droplet = False
+                if s > 0.35 and abs_t < 0.75:
+                    d_cell_s = s * 14.0
+                    d_cell_t = t * 12.0
+                    d_is = int(d_cell_s)
+                    d_it = int(d_cell_t)
+                    d_hash = np.sin(float(d_is) * 317.3 + float(d_it) * 583.1) * 28472.9
+                    d_rnd = d_hash - np.floor(d_hash)
                     
-            elif m_id == 3:  # Stamen Filament
-                # Pale translucent jade-ivory with smooth gradient
-                r_alb = 0.82; g_alb = 0.94; b_alb = 0.76
-                roughness = 0.28; spec_k = 0.28; trans_k = 0.38
-                
-            elif m_id == 4:  # Golden-Orange Pollen Anther
-                # Dehiscence sulcus down center
-                sulcus = np.exp(-32.0 * (t * t))
-                # Intense vibrant golden-amber pollen exterior
-                r_alb = 0.94 * (1.0 - 0.40 * sulcus) + 0.48 * (0.40 * sulcus)
-                g_alb = 0.50 * (1.0 - 0.40 * sulcus) + 0.20 * (0.40 * sulcus)
-                b_alb = 0.04 * (1.0 - 0.40 * sulcus) + 0.02 * (0.40 * sulcus)
-                # Granular pollen micro-bumps
-                p_bump = 0.32 * (np.sin(280.0 * s) * np.cos(280.0 * t) + 0.5 * np.sin(420.0 * s))
-                nx += p_bump * (1.0 - 0.6 * sulcus)
-                ny += p_bump * (1.0 - 0.6 * sulcus)
+                    if d_rnd > 0.94:
+                        df_s = d_cell_s - float(d_is) - 0.5
+                        df_t = d_cell_t - float(d_it) - 0.5
+                        drop_r2 = df_s * df_s + df_t * df_t
+                        if drop_r2 < 0.12:
+                            drop_h = np.sqrt(max(0.0, 0.12 - drop_r2)) / np.sqrt(0.12)
+                            nx += df_t * drop_h * 1.8
+                            ny += df_s * drop_h * 1.8
+                            roughness = 0.03
+                            spec_k = 0.85
+                            is_droplet = True
+                            
+                # 10. Epidermal Cell Relief (crystalline / satin sheen)
+                if not is_droplet:
+                    cell_micro_x = 0.032 * (np.sin(380.0 * s + 140.0 * t) + 0.5 * np.cos(640.0 * s - 280.0 * t))
+                    cell_micro_y = 0.032 * (np.cos(300.0 * s - 180.0 * t) + 0.5 * np.sin(580.0 * s + 340.0 * t))
+                    nx += cell_micro_x * 0.18
+                    ny += cell_micro_y * 0.18
+                    cell_lum = 1.0 + 0.025 * np.sin(420.0 * s + 310.0 * t)
+                    r_alb = min(1.0, r_alb * cell_lum)
+                    g_alb = min(1.0, g_alb * cell_lum)
+                    b_alb = min(1.0, b_alb * cell_lum)
+                    
                 n_len = max(1e-6, (nx*nx + ny*ny + nz*nz)**0.5)
                 nx /= n_len; ny /= n_len; nz /= n_len
-                roughness = 0.72; spec_k = 0.07; trans_k = 0.04
                 
-            elif m_id == 5:  # Pistil / 3-Lobed Stigma
-                # Moist glossy pistachio-green with subtle carmine blush
-                r_alb = 0.70; g_alb = 0.86; b_alb = 0.54
-                roughness = 0.18; spec_k = 0.38; trans_k = 0.20
+            elif m_id == 3:  # Stamen Filament
+                r_alb = 0.82; g_alb = 0.94; b_alb = 0.76
+                roughness = 0.25; spec_k = 0.32; trans_k = 0.40
+                if s > 0.70:
+                    f_hash = np.sin(float(px) * 43.1 + float(py) * 89.3) * 19284.1
+                    if (f_hash - np.floor(f_hash)) > 0.85:
+                        r_alb = 0.92; g_alb = 0.52; b_alb = 0.04
+                        roughness = 0.65
+                        
+            elif m_id == 4:  # Golden-Amber Pollen Anther (2-Lobed Thecae with 3D Pollen Relief)
+                p_freq = 95.0
+                pn_x = np.sin(p_freq * wx) * np.cos(p_freq * wy)
+                pn_y = np.sin(p_freq * wy) * np.cos(p_freq * wz)
+                pn_z = np.sin(p_freq * wz) * np.cos(p_freq * wx)
+                p_relief = (pn_x + pn_y + pn_z) * 0.333
+                
+                sulcus = np.exp(-32.0 * (t * t))
+                p_level = 0.5 + 0.5 * p_relief
+                
+                r_alb = (0.75 * (1.0 - p_level) + 0.96 * p_level) * (1.0 - 0.45 * sulcus) + 0.38 * (0.45 * sulcus)
+                g_alb = (0.28 * (1.0 - p_level) + 0.50 * p_level) * (1.0 - 0.55 * sulcus) + 0.12 * (0.55 * sulcus)
+                b_alb = 0.015 * (1.0 - sulcus)
+                
+                nx += (pn_x * 0.55 + 0.15 * np.sin(180.0 * s)) * (1.0 - 0.4 * sulcus)
+                ny += (pn_y * 0.55 + 0.15 * np.cos(180.0 * s)) * (1.0 - 0.4 * sulcus)
+                nz += pn_z * 0.55 * (1.0 - 0.4 * sulcus)
+                n_len = max(1e-6, (nx*nx + ny*ny + nz*nz)**0.5)
+                nx /= n_len; ny /= n_len; nz /= n_len
+                roughness = 0.82; spec_k = 0.05; trans_k = 0.02
+                
+            elif m_id == 5:  # Pistil / 3-Lobed Viscid Stigma
+                lobe_ang = np.arctan2(ny, nx)
+                lobe_tint = 0.5 + 0.5 * np.cos(3.0 * lobe_ang)
+                r_alb = 0.68 + 0.14 * lobe_tint
+                g_alb = 0.86 - 0.08 * lobe_tint
+                b_alb = 0.52 - 0.04 * lobe_tint
+                roughness = 0.10; spec_k = 0.60; trans_k = 0.22
                 
             elif m_id == 6:  # Stem
-                # Sturdy dark botanical green
                 r_alb = 0.038; g_alb = 0.125; b_alb = 0.032
-                roughness = 0.32; spec_k = 0.22; trans_k = 0.12
+                stem_fib = 0.008 * np.sin(75.0 * t)
+                g_alb = max(0.0, min(1.0, g_alb + stem_fib))
+                roughness = 0.30; spec_k = 0.24; trans_k = 0.12
                 
             elif m_id == 7:  # Leaf
-                # Rich glossy dark emerald green with pale lime midrib groove
-                r_alb = 0.022; g_alb = 0.082; b_alb = 0.020
+                r_alb = 0.020; g_alb = 0.078; b_alb = 0.018
                 mid_l = np.exp(-36.0 * (t * t))
-                r_alb = r_alb * (1.0 - mid_l) + 0.090 * mid_l
-                g_alb = g_alb * (1.0 - mid_l) + 0.210 * mid_l
-                b_alb = b_alb * (1.0 - mid_l) + 0.055 * mid_l
-                # Waxy cuticle specular
-                roughness = 0.18; spec_k = 0.42; trans_k = 0.10
+                r_alb = r_alb * (1.0 - mid_l) + 0.088 * mid_l
+                g_alb = g_alb * (1.0 - mid_l) + 0.205 * mid_l
+                b_alb = b_alb * (1.0 - mid_l) + 0.052 * mid_l
+                leaf_vein = 0.004 * np.sin(120.0 * t)
+                g_alb = max(0.0, min(1.0, g_alb + leaf_vein))
+                nx += 0.035 * np.cos(120.0 * t)
+                if abs_t > 0.85:
+                    edge_w = (abs_t - 0.85) / 0.15
+                    g_alb = min(1.0, g_alb + 0.03 * edge_w)
+                    trans_k = 0.22 * edge_w
+                else:
+                    trans_k = 0.08
+                n_len = max(1e-6, (nx*nx + ny*ny + nz*nz)**0.5)
+                nx /= n_len; ny /= n_len; nz /= n_len
+                roughness = 0.16; spec_k = 0.46
                 
             # Depth and contact ambient occlusion
             depth_val = z_buffer[py, px]
@@ -649,6 +721,227 @@ def shade_scene_numba(
             rendered_rgb[py, px, 0] = c_r
             rendered_rgb[py, px, 1] = c_g
             rendered_rgb[py, px, 2] = c_b
+
+
+
+@numba.njit(fastmath=True, parallel=True)
+def apply_fxaa_antialiasing(
+    height: int,
+    width: int,
+    image_rgb: np.ndarray,
+    out_rgb: np.ndarray
+):
+    """
+    Subpixel Fast Approximate Anti-Aliasing (FXAA) filter.
+    Eliminates polygon stair-stepping on petal silhouettes and leaf contours.
+    """
+    for py in numba.prange(height):
+        for px in range(width):
+            c_m = image_rgb[py, px]
+            l_m = 0.299 * c_m[0] + 0.587 * c_m[1] + 0.114 * c_m[2]
+            
+            py_n = max(0, py - 1); py_s = min(height - 1, py + 1)
+            px_w = max(0, px - 1); px_e = min(width - 1, px + 1)
+            
+            c_n = image_rgb[py_n, px]; l_n = 0.299 * c_n[0] + 0.587 * c_n[1] + 0.114 * c_n[2]
+            c_s = image_rgb[py_s, px]; l_s = 0.299 * c_s[0] + 0.587 * c_s[1] + 0.114 * c_s[2]
+            c_w = image_rgb[py, px_w]; l_w = 0.299 * c_w[0] + 0.587 * c_w[1] + 0.114 * c_w[2]
+            c_e = image_rgb[py, px_e]; l_e = 0.299 * c_e[0] + 0.587 * c_e[1] + 0.114 * c_e[2]
+            
+            l_min = min(l_m, min(min(l_n, l_s), min(l_w, l_e)))
+            l_max = max(l_m, max(max(l_n, l_s), max(l_w, l_e)))
+            l_range = l_max - l_min
+            
+            if l_range < 0.05:
+                out_rgb[py, px, 0] = c_m[0]
+                out_rgb[py, px, 1] = c_m[1]
+                out_rgb[py, px, 2] = c_m[2]
+                continue
+                
+            filter_r = 0.25 * (c_n[0] + c_s[0] + c_w[0] + c_e[0])
+            filter_g = 0.25 * (c_n[1] + c_s[1] + c_w[1] + c_e[1])
+            filter_b = 0.25 * (c_n[2] + c_s[2] + c_w[2] + c_e[2])
+            
+            blend = min(0.48, max(0.0, (l_range - 0.05) / 0.35 * 0.48))
+            
+            out_rgb[py, px, 0] = c_m[0] * (1.0 - blend) + filter_r * blend
+            out_rgb[py, px, 1] = c_m[1] * (1.0 - blend) + filter_g * blend
+            out_rgb[py, px, 2] = c_m[2] * (1.0 - blend) + filter_b * blend
+
+
+@numba.njit(fastmath=True, parallel=True)
+def apply_optical_bloom_glints(
+    height: int,
+    width: int,
+    hdr_rgb: np.ndarray,
+    out_rgb: np.ndarray,
+    bloom_radius: int,
+    bloom_sigma: float,
+    step: int
+):
+    """
+    Simulates high-energy specular glints and optical lens blooming.
+    Activates only on extreme highlights (water droplets, wet stigma, glistening nectar).
+    """
+    inv_sigma2 = 1.0 / (2.0 * bloom_sigma * bloom_sigma)
+    bloom_k = 0.035
+    
+    for py in numba.prange(height):
+        for px in range(width):
+            c_r = hdr_rgb[py, px, 0]
+            c_g = hdr_rgb[py, px, 1]
+            c_b = hdr_rgb[py, px, 2]
+            
+            acc_br = 0.0; acc_bg = 0.0; acc_bb = 0.0; acc_bw = 0.0
+            
+            for dy in range(-bloom_radius, bloom_radius + 1, step):
+                iy = py + dy
+                if 0 <= iy < height:
+                    for dx in range(-bloom_radius, bloom_radius + 1, step):
+                        ix = px + dx
+                        if 0 <= ix < width:
+                            sr = hdr_rgb[iy, ix, 0]
+                            sg = hdr_rgb[iy, ix, 1]
+                            sb = hdr_rgb[iy, ix, 2]
+                            slum = 0.2126 * sr + 0.7152 * sg + 0.0722 * sb
+                            if slum > 1.45:
+                                excess = slum - 1.45
+                                d2 = float(dx * dx + dy * dy)
+                                gw = np.exp(-d2 * inv_sigma2)
+                                acc_br += sr * gw * excess
+                                acc_bg += sg * gw * excess
+                                acc_bb += sb * gw * excess
+                                acc_bw += gw
+                                
+            if acc_bw > 1e-4:
+                out_rgb[py, px, 0] = c_r + bloom_k * acc_br
+                out_rgb[py, px, 1] = c_g + bloom_k * acc_bg
+                out_rgb[py, px, 2] = c_b + bloom_k * acc_bb
+            else:
+                out_rgb[py, px, 0] = c_r
+                out_rgb[py, px, 1] = c_g
+                out_rgb[py, px, 2] = c_b
+
+
+@numba.njit(fastmath=True, parallel=True)
+def apply_depth_of_field_macro(
+    height: int,
+    width: int,
+    hdr_rgb: np.ndarray,
+    z_buffer: np.ndarray,
+    z_focus: float,
+    coc_scale: float,
+    max_radius: float,
+    out_hdr: np.ndarray
+):
+    """
+    Macro Thin-Lens Depth-of-Field (DoF) filter with 28-tap Fermat spiral sampling.
+    Renders creamy, soft bokeh for background foliage while keeping hero flower razor-sharp.
+    """
+    n_taps = 28
+    offsets_x = np.empty(n_taps, dtype=np.float32)
+    offsets_y = np.empty(n_taps, dtype=np.float32)
+    golden_angle = 2.39996323
+    
+    for i in range(n_taps):
+        theta = float(i) * golden_angle
+        r = np.sqrt((float(i) + 0.5) / float(n_taps))
+        offsets_x[i] = r * np.cos(theta)
+        offsets_y[i] = r * np.sin(theta)
+        
+    for py in numba.prange(height):
+        for px in range(width):
+            z_curr = z_buffer[py, px]
+            if z_curr > 1e6:
+                coc_curr = max_radius * 0.65
+            else:
+                dz = z_curr - z_focus
+                coc_curr = min(max_radius, coc_scale * abs(dz) / z_curr)
+                
+            if coc_curr < 0.65:
+                out_hdr[py, px, 0] = hdr_rgb[py, px, 0]
+                out_hdr[py, px, 1] = hdr_rgb[py, px, 1]
+                out_hdr[py, px, 2] = hdr_rgb[py, px, 2]
+                continue
+                
+            acc_r = 0.0; acc_g = 0.0; acc_b = 0.0; acc_w = 0.0
+            
+            for k in range(n_taps):
+                sx = px + offsets_x[k] * coc_curr
+                sy = py + offsets_y[k] * coc_curr
+                ix = int(round(sx))
+                iy = int(round(sy))
+                
+                if 0 <= ix < width and 0 <= iy < height:
+                    z_samp = z_buffer[iy, ix]
+                    coc_samp = max_radius * 0.65 if z_samp > 1e6 else min(max_radius, coc_scale * abs(z_samp - z_focus) / z_samp)
+                    
+                    dist = np.sqrt((sx - px)**2 + (sy - py)**2)
+                    effective_coc = max(coc_curr, coc_samp)
+                    
+                    if dist <= effective_coc + 0.5:
+                        w = 1.0 - max(0.0, (dist - effective_coc + 0.5))
+                        if z_samp > z_curr + 0.12:
+                            w *= max(0.05, 1.0 - (z_samp - z_curr) * 0.85)
+                        acc_r += hdr_rgb[iy, ix, 0] * w
+                        acc_g += hdr_rgb[iy, ix, 1] * w
+                        acc_b += hdr_rgb[iy, ix, 2] * w
+                        acc_w += w
+                        
+            if acc_w > 1e-4:
+                out_hdr[py, px, 0] = acc_r / acc_w
+                out_hdr[py, px, 1] = acc_g / acc_w
+                out_hdr[py, px, 2] = acc_b / acc_w
+            else:
+                out_hdr[py, px, 0] = hdr_rgb[py, px, 0]
+                out_hdr[py, px, 1] = hdr_rgb[py, px, 1]
+                out_hdr[py, px, 2] = hdr_rgb[py, px, 2]
+
+
+@numba.njit(fastmath=True, parallel=True)
+def apply_photographic_sensor_curve(
+    height: int,
+    width: int,
+    hdr_rgb: np.ndarray,
+    out_srgb: np.ndarray
+):
+    """
+    Photographic sensor response:
+    - Subtle optical lens vignetting (cos^4 law approximation)
+    - ACES/Filmic tone curve with shoulder rolloff for specular highlights
+    - Standard sRGB gamma transform (gamma 2.2)
+    - Full-frame CMOS sensor ISO micro-grain (deterministic noise)
+    """
+    for py in numba.prange(height):
+        v = (float(py) + 0.5) / float(height)
+        dy = (v - 0.48) * 1.10
+        
+        for px in range(width):
+            u = (float(px) + 0.5) / float(width)
+            dx = (u - 0.50) * 1.40
+            
+            r2 = dx * dx + dy * dy
+            vignette = max(0.86, 1.0 - 0.14 * (r2 ** 1.15))
+            
+            c_r = hdr_rgb[py, px, 0] * vignette * 1.25
+            c_g = hdr_rgb[py, px, 1] * vignette * 1.25
+            c_b = hdr_rgb[py, px, 2] * vignette * 1.25
+            
+            l_white = 2.05
+            tm_r = (c_r * (1.0 + c_r / (l_white * l_white))) / (1.0 + c_r)
+            tm_g = (c_g * (1.0 + c_g / (l_white * l_white))) / (1.0 + c_g)
+            tm_b = (c_b * (1.0 + c_b / (l_white * l_white))) / (1.0 + c_b)
+            
+            g_r = np.power(max(0.0, min(1.0, tm_r)), 1.0 / 2.2)
+            g_g = np.power(max(0.0, min(1.0, tm_g)), 1.0 / 2.2)
+            g_b = np.power(max(0.0, min(1.0, tm_b)), 1.0 / 2.2)
+            
+            h = np.sin(float(px) * 12.9898 + float(py) * 78.233) * 43758.5453
+            noise = (h - np.floor(h) - 0.5) * 0.012
+            
+            out_srgb[py, px, 0] = np.uint8(max(0.0, min(255.0, (g_r + noise) * 255.0)))
+            out_srgb[py, px, 1] = np.uint8(max(0.0, min(255.0, (g_g + noise) * 255.0)))
+            out_srgb[py, px, 2] = np.uint8(max(0.0, min(255.0, (g_b + noise) * 255.0)))
 
 
 class LilyRenderer:
@@ -846,10 +1139,29 @@ class LilyRenderer:
             self.lighting.ambient_radiance.astype(np.float32)
         )
         
-        # Filmic Tone Mapping (Reinhard-ACES hybrid) with calibrated exposure & Gamma 2.2
-        exposed_rgb = rendered_rgb * 1.30
-        l_white = 1.70
-        tone_mapped = (exposed_rgb * (1.0 + exposed_rgb / (l_white * l_white))) / (1.0 + exposed_rgb)
-        gamma_corrected = np.power(np.clip(tone_mapped, 0.0, 1.0), 1.0 / 2.2)
+        # Optical and photographic post-processing pipeline
+        res_scale = float(self.width) / 1200.0
         
-        return (gamma_corrected * 255.0).astype(np.uint8)
+        # 1. Subpixel FXAA Anti-Aliasing
+        aa_rgb = np.zeros_like(rendered_rgb)
+        apply_fxaa_antialiasing(self.height, self.width, rendered_rgb, aa_rgb)
+        
+        # 2. Subtle Lens Glint Bloom (specular threshold > 1.45)
+        bloomed_rgb = np.zeros_like(aa_rgb)
+        b_rad = max(4, int(round(9.0 * res_scale)))
+        b_step = max(1, int(round(2.0 * res_scale)))
+        b_sigma = 4.0 * res_scale
+        apply_optical_bloom_glints(self.height, self.width, aa_rgb, bloomed_rgb, b_rad, b_sigma, b_step)
+        
+        # 3. Macro Depth of Field (Thin-Lens bokeh blur focused on hero flower at z=3.92)
+        dof_rgb = np.zeros_like(bloomed_rgb)
+        z_focus = 3.92
+        coc_scale = 18.0 * res_scale
+        max_radius = 5.5 * res_scale
+        apply_depth_of_field_macro(self.height, self.width, bloomed_rgb, z_buffer, z_focus, coc_scale, max_radius, dof_rgb)
+        
+        # 4. Photographic Sensor Response (Vignetting, Filmic S-Curve, CMOS Micro-Grain)
+        final_srgb = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+        apply_photographic_sensor_curve(self.height, self.width, dof_rgb, final_srgb)
+        
+        return final_srgb

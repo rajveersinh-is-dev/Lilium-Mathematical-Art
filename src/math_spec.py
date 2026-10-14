@@ -142,11 +142,12 @@ def generate_typst_panel_markup() -> str:
   $ S_"key"(bold(x)) = frac(1, 16) sum_(i=1)^16 bb(1) lr( z_L (bold(x)) - delta_"bias" <= Z_"SM"(bold(u)_L + r_"pcf" bold(xi)_i) ) $
   Crevices and petal folds are anchored by screen-space ambient occlusion (SSAO) with depth bilateral filtering $A_"ssao"(bold(x))$.
 
-  == 10. Dual-Lobe GGX BRDF & Filmic Tone Operator
-  Surface radiance balances dual-lobe Cook-Torrance microfacets ($alpha_1 = 0.42, alpha_2 = 0.12$), Schlick Fresnel $F(theta)$, and forward subsurface transmission:
-  $ I(bold(x)) = bold(c)_"alb" I_a A_"ssao" + I_"key" lr([ bold(c)_"alb" (d_1 S_"key" + t_1) + bold(c)_"ivory" b_"sub" + s_1 S_"key" ]) + bold(I)_"fill" + bold(I)_"rim" $
-  Discrete pixel color emerges from Z-buffer minimization and ACES-Reinhard filmic tone mapping:
-  $ bold(F)_theta(u, v) = lr( frac(1.30 I (1 + 1.30 I / L_"white"^2), 1 + 1.30 I) )^(1 / 2.2) $
+  == 10. Macro Optics, Thin-Lens Bokeh & Photographic Tone
+  Surface radiance balances dual-lobe Cook-Torrance microfacets, Schlick Fresnel, and forward subsurface transmission.
+  Thin-lens depth-of-field focuses on the hero flower at $z_"focus" = 3.92$ with 28-tap Fermat spiral bokeh sampling:
+  $ C(z) = "min" lr( r_"max", k_"CoC" frac(|z - z_"focus"|, z) ), quad bold(I)_"DoF" = frac(1, sum w_i) sum_(i=1)^28 w_i bold(I)(bold(u) + C(z) bold(phi)_i) $
+  Silhouettes are resolved via subpixel FXAA. Final sensor response applies $cos^4$ vignetting, filmic ACES shoulder rolloff, and deterministic CMOS micro-grain:
+  $ bold(F)_theta(u, v) = lr( frac(1.25 I (1 + 1.25 I / L_"white"^2), 1 + 1.25 I) )^(1 / 2.2) + bold(xi)_"CMOS" $
 ]
 """
 
@@ -256,13 +257,14 @@ Surface radiance combines dual-lobe Cook-Torrance microfacets ($\alpha_1 = 0.42,
 I(\mathbf{x}) = \mathbf{c}_{\mathrm{alb}} I_a A_{\mathrm{ssao}} + I_{\mathrm{key}} \left[ \mathbf{c}_{\mathrm{alb}}(d_1 S_{\mathrm{key}} + t_1) + \mathbf{c}_{\mathrm{ivory}} b_{\mathrm{sub}} + s_1 S_{\mathrm{key}} \right] + \mathbf{I}_{\mathrm{fill}} + \mathbf{I}_{\mathrm{rim}}.
 \end{equation}
 
-\section{Discrete Projection and Tone Mapping}
-Pixel color emerges from Z-buffer minimization and ACES-Reinhard filmic tone mapping:
+\section{Macro Optics, Thin-Lens Bokeh and Photographic Response}
+Depth of field simulates a physical macro thin-lens aperture focused at $z_{\mathrm{focus}} = 3.92$ with Circle of Confusion $C(z)$ and 28-tap Fermat spiral bokeh sampling:
 \begin{equation}
-z^*(u, v) = \min_m \{ z : \mathbf{r}(u, v) \cap \mathcal{M}_m \ne \emptyset \},
+C(z) = \min\left( r_{\max}, k_{\mathrm{CoC}} \frac{|z - z_{\mathrm{focus}}|}{z} \right), \quad \mathbf{I}_{\mathrm{DoF}}(\mathbf{u}) = \frac{\sum_{i=1}^{28} w_i \mathbf{I}(\mathbf{u} + C(z) \boldsymbol{\phi}_i)}{\sum_{i=1}^{28} w_i}.
 \end{equation}
+Silhouettes are resolved via subpixel FXAA filtering. Final sensor response integrates $\cos^4$ vignetting, ACES filmic shoulder rolloff, and CMOS sensor micro-grain:
 \begin{equation}
-\mathbf{F}_\theta(u, v) = \left( \frac{1.30 I(1 + 1.30 I / L_{\mathrm{white}}^2)}{1 + 1.30 I} \right)^{1 / 2.2}.
+\mathbf{F}_\theta(u, v) = \left( \frac{1.25 I(1 + 1.25 I / L_{\mathrm{white}}^2)}{1 + 1.25 I} \right)^{1 / 2.2} + \boldsymbol{\xi}_{\mathrm{CMOS}}.
 \end{equation}
 
 \end{document}
