@@ -4,7 +4,7 @@ foliage.py - Stems, lanceolate leaves, and bouquet spatial composition.
 Features:
 - Parametric cubic Bézier stems connecting flower receptacles to bouquet base.
 - Lanceolate lily leaves with longitudinal midrib groove and gravitational droop.
-- Cohesive bouquet arrangement with 10 flowers/buds, stems, and lush framing foliage.
+- Cohesive bouquet arrangement with 8 blooming lilies, stems, and lush framing foliage.
 """
 
 from typing import List, Dict, Any, Tuple
@@ -171,7 +171,7 @@ class LilyStem:
 class BouquetScene:
     """
     Assembles a complete, natural botanical bouquet containing:
-    - 10 flowers & buds with varied 3D poses, rotations, and scales.
+    - 8 blooming lilies with varied 3D poses, rotations, and scales.
     - Curved stems flowing into a central bouquet base.
     - 32 lanceolate lily leaves radiating outward to frame the composition.
     """
@@ -187,7 +187,7 @@ class BouquetScene:
         """Constructs the full 3D bouquet configuration."""
         bouquet_base = np.array([0.0, -2.2, -0.4])
         
-        # 10 Flowers & Buds with realistic botanical 3D placement
+        # 8 Blooming Lilies with realistic botanical 3D placement
         # Positions arranged in a rich, multi-layered dome bouquet layout
         flower_configs = [
             # 1. Central Hero Blossom (Full Frontal 3/4 Face, magnificent opening)
@@ -277,28 +277,6 @@ class BouquetScene:
                 "opening": 0.85,
                 "is_bud": False,
                 "roll": 0.28
-            },
-            # 9. Swelling Top-Left Bud (Opening seam visible, emerging from canopy)
-            {
-                "id": 9,
-                "center": np.array([-0.78, 1.05, -0.05]),
-                "facing": np.array([-0.28, 0.88, 0.38]),
-                "up": np.array([0.1, 0.5, 0.85]),
-                "scale": 0.82,
-                "opening": 0.25,
-                "is_bud": True,
-                "roll": 0.12
-            },
-            # 10. Elegant Top-Right Bud (Slender tapered form, emerging from canopy)
-            {
-                "id": 10,
-                "center": np.array([0.80, 1.02, -0.04]),
-                "facing": np.array([0.30, 0.86, 0.40]),
-                "up": np.array([-0.1, 0.5, 0.85]),
-                "scale": 0.80,
-                "opening": 0.22,
-                "is_bud": True,
-                "roll": -0.18
             }
         ]
         
@@ -377,8 +355,8 @@ class BouquetScene:
     def generate_bouquet_geometry(self) -> Dict[str, Any]:
         """
         Synthesizes full geometry for the entire bouquet:
-        - All 10 flowers & buds
-        - All 10 stems
+        - All 8 blooming lilies
+        - All 8 stems
         - All 35+ lanceolate leaves
         """
         from src.lilies import LilyFlower
