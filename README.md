@@ -40,7 +40,7 @@ The composition is structured into two seamlessly integrated vertical regions:
 │                                                                 │
 │   Photorealistic procedural 3D render of a lush bouquet of      │
 │   10 blooming white lilies, swelling buds, and lanceolate       │
-│   foliage rendered against a deep chiaroscuro forest field.    │
+│   foliage rendered against a deep chiaroscuro forest field.     │
 │                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
