@@ -24,7 +24,7 @@ def main():
         output_path=out_file,
         typ_source_path="equations/equation_panel.typ",
         target_width=2400,
-        target_height=880
+        target_height=960
     )
     t_comp = time.time() - t0
     print(f"[2/2] Compiled and formatted in {t_comp:.2f} seconds.")

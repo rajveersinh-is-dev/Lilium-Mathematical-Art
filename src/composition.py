@@ -24,7 +24,7 @@ def render_equation_panel(
     output_path: str = "outputs/lily_equations.png",
     typ_source_path: str = "equations/equation_panel.typ",
     target_width: int = 2400,
-    target_height: int = 880
+    target_height: int = 960
 ) -> Image.Image:
     """
     Compiles Typst mathematical specification to high-resolution PNG image
@@ -55,7 +55,7 @@ def render_equation_panel(
 def render_caption_band(
     width: int = 2400,
     height: int = 80,
-    title: str = "White Lilies — A Mathematical Reconstruction",
+    title: str = "White Lilies by Rajveersinh Vishal Pardeshi",
     subtitle: str = "Parametric Perianth Manifolds · Trimerous Whorls · PBR Subsurface Translucency · 2400 × 1440 Procedural Synthesis"
 ) -> Image.Image:
     """
@@ -104,14 +104,14 @@ def compose_final_artwork(
     final_output_path: str = "outputs/lilium_mathematical_art.png",
     canvas_size: int = 2400,
     upper_height: int = 1440,
-    caption_height: int = 80,
-    equation_height: int = 880
+    caption_height: int = 0,
+    equation_height: int = 960
 ) -> Image.Image:
     """
     Assembles the complete master artwork in square layout (canvas_size x canvas_size):
-    - [0 : upper_height] -> Botanical Bouquet image
-    - [upper_height : upper_height + caption_height] -> Dividing Caption band
-    - [upper_height + caption_height : canvas_size] -> Dense Equation panel
+    Matching Hamid Naderi Yeganeh's artwork format:
+    - [0 : upper_height] -> Botanical Bouquet image (2400 x 1440)
+    - [upper_height : canvas_size] -> Seamless Mathematical Panel (2400 x 960)
     """
     bouquet_img = Image.open(bouquet_image_path).convert("RGB")
     if bouquet_img.size != (canvas_size, upper_height):
@@ -121,14 +121,16 @@ def compose_final_artwork(
     if eq_img.size != (canvas_size, equation_height):
         eq_img = eq_img.resize((canvas_size, equation_height), Image.Resampling.LANCZOS)
         
-    caption_img = render_caption_band(width=canvas_size, height=caption_height)
-    
     master_canvas = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
     
     # Paste layers
     master_canvas.paste(bouquet_img, (0, 0))
-    master_canvas.paste(caption_img, (0, upper_height))
-    master_canvas.paste(eq_img, (0, upper_height + caption_height))
+    if caption_height > 0:
+        caption_img = render_caption_band(width=canvas_size, height=caption_height)
+        master_canvas.paste(caption_img, (0, upper_height))
+        master_canvas.paste(eq_img, (0, upper_height + caption_height))
+    else:
+        master_canvas.paste(eq_img, (0, upper_height))
     
     Path(final_output_path).parent.mkdir(parents=True, exist_ok=True)
     master_canvas.save(final_output_path, quality=95)

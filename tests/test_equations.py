@@ -30,10 +30,11 @@ def test_mathematical_model_data():
 
 def test_typst_markup_structure():
     markup = generate_typst_panel_markup()
-    assert "ANALYTICAL FOUNDATIONS OF THE LILIUM SYNTHESIS ENGINE" in markup
-    # Check all 10 analytical sections exist
-    for i in range(1, 11):
-        assert f"== {i}." in markup
+    assert "White Lilies by Rajveersinh Vishal Pardeshi" in markup
+    assert "The above picture is a converted version of a 2400" in markup
+    assert "rgb" in markup
+    assert "H_v" in markup
+    assert "S_\"key\"" in markup
 
 
 def test_latex_source_structure():
@@ -41,9 +42,8 @@ def test_latex_source_structure():
     assert r"\documentclass" in tex
     assert r"\begin{document}" in tex
     assert r"\end{document}" in tex
+    assert "Rajveersinh Vishal Pardeshi" in tex
     assert r"\section{Coordinate Domain and Camera Projection}" in tex
-    assert r"\section{Parametric Tepal Manifold $\mathbf{S}_{j,k}$}" in tex
-    assert r"\section{Trimerous Perianth Configuration}" in tex
 
 
 def test_typst_compilation():
@@ -52,10 +52,10 @@ def test_typst_compilation():
         output_path=test_out,
         typ_source_path="equations/equation_panel.typ",
         target_width=1200,
-        target_height=440
+        target_height=480
     )
     assert isinstance(img, Image.Image)
-    assert img.size == (1200, 440)
+    assert img.size == (1200, 480)
     assert Path(test_out).exists()
     # Clean up test output
     Path(test_out).unlink(missing_ok=True)
