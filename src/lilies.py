@@ -316,8 +316,8 @@ class LilyFlower:
             return
 
         base_length = 0.72 * self.scale
-        inner_width = 0.215 * base_length * (0.65 + 0.35 * self.opening)
-        outer_width = 0.150 * base_length * (0.65 + 0.35 * self.opening)
+        inner_width = 0.238 * base_length * (0.65 + 0.35 * self.opening)
+        outer_width = 0.158 * base_length * (0.65 + 0.35 * self.opening)
         throat_depth = 0.38 * base_length
         reflex = 0.40 * base_length * (self.opening ** 1.3)
         
@@ -327,7 +327,7 @@ class LilyFlower:
             angle_jitter = self.rng.uniform(-0.03, 0.03)
             width_var = self.rng.uniform(0.97, 1.03)
             refl_var = self.rng.uniform(0.95, 1.05)
-            ruffle_amp = 0.016 * self.rng.uniform(0.90, 1.10)
+            ruffle_amp = 0.020 * self.rng.uniform(0.90, 1.10)
             
             tepal = LilyTepal(
                 index=i,
@@ -343,7 +343,7 @@ class LilyFlower:
                 angle_jitter=angle_jitter,
                 width_harmonic=self.rng.uniform(0.30, 0.38),
                 ruffle_amplitude=ruffle_amp,
-                ruffle_freq=self.rng.uniform(3.2, 4.2),
+                ruffle_freq=self.rng.uniform(2.8, 3.8),
                 phase=self.rng.uniform(0.0, 2.0 * np.pi)
             )
             self.tepals.append(tepal)
@@ -354,7 +354,7 @@ class LilyFlower:
             angle_jitter = self.rng.uniform(-0.03, 0.03)
             width_var = self.rng.uniform(0.96, 1.04)
             refl_var = self.rng.uniform(0.95, 1.05)
-            ruffle_amp = 0.010 * self.rng.uniform(0.90, 1.10)
+            ruffle_amp = 0.012 * self.rng.uniform(0.90, 1.10)
             
             tepal = LilyTepal(
                 index=3 + i,
@@ -370,7 +370,7 @@ class LilyFlower:
                 angle_jitter=angle_jitter,
                 width_harmonic=self.rng.uniform(0.26, 0.34),
                 ruffle_amplitude=ruffle_amp,
-                ruffle_freq=self.rng.uniform(3.2, 4.2),
+                ruffle_freq=self.rng.uniform(2.8, 3.8),
                 phase=self.rng.uniform(0.0, 2.0 * np.pi)
             )
             self.tepals.append(tepal)
@@ -392,7 +392,7 @@ class LilyFlower:
         
         # 1. Generate Tepals with high-density smooth curvature
         for tepal in self.tepals:
-            t_verts, t_faces, t_normals, t_uvs = tepal.generate_mesh(n_s=92, n_t=44)
+            t_verts, t_faces, t_normals, t_uvs = tepal.generate_mesh(n_s=104, n_t=48)
             world_verts = self.center + (self.rot_matrix @ t_verts.T).T
             world_normals = (self.rot_matrix @ t_normals.T).T
             
@@ -411,8 +411,8 @@ class LilyFlower:
         # 2. Generate Reproductive Organs (only if opening > 0.4 and not bud)
         if self.opening > 0.4 and not self.is_bud:
             filament_len = 0.44 * self.scale * (self.opening ** 1.35)
-            anther_len = 0.120 * self.scale
-            anther_radius = 0.0085 * self.scale
+            anther_len = 0.175 * self.scale
+            anther_radius = 0.0210 * self.scale
             
             for k in range(6):
                 ang = k * (np.pi / 3.0) + np.pi / 6.0 + self.rng.uniform(-0.10, 0.10)
@@ -473,21 +473,22 @@ class LilyFlower:
                 anther_ortho1 = normalize(np.cross(anther_dir, np.array([0.0, 0.0, 1.0])))
                 anther_ortho2 = normalize(np.cross(anther_dir, anther_ortho1))
                 
-                n_lat = 14
-                n_lon = 16
+                n_lat = 18
+                n_lon = 20
                 anther_verts = []
                 anther_uvs_list = []
                 
                 for lat_idx in range(n_lat):
                     lat_frac = lat_idx / (n_lat - 1)
                     lat = -np.pi / 2.0 + lat_frac * np.pi
-                    # Subtle natural crescent curvature of anther
-                    crescent_curve = -0.0028 * self.scale * (1.0 - np.cos(lat))
+                    # Natural crescent curvature of anther pod
+                    crescent_curve = -0.0055 * self.scale * (1.0 - np.cos(lat))
                     
                     for lon_idx in range(n_lon):
                         lon_frac = lon_idx / n_lon
                         lon = lon_idx * (2.0 * np.pi / n_lon)
-                        theca_mod = 1.0 + 0.35 * np.cos(2.0 * lon)
+                        # Dehisced 2-lobed thecae with deep sulcus furrow
+                        theca_mod = 1.0 + 0.42 * np.cos(2.0 * lon)
                         rad_curr = anther_radius * theca_mod * np.cos(lat)
                         
                         x_e = (anther_len * 0.5) * np.sin(lat)
@@ -553,7 +554,7 @@ class LilyFlower:
             
             # 3-Lobed Swollen Stigma Pad at style tip
             n_stigma_radial = 18
-            stigma_rad_base = 0.016 * self.scale
+            stigma_rad_base = 0.022 * self.scale
             stigma_tip_center = stigma_world + self.rot_matrix @ np.array([0.0, 0.0, 0.008 * self.scale])
             
             # Center vertex of stigma

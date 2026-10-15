@@ -20,7 +20,7 @@
 ## Master Artwork
 
 <div align="center">
-  <img src="outputs/lilium_mathematical_art.png?v=3" alt="White Lilies by Rajveersinh Vishal Pardeshi" width="850"/>
+  <img src="outputs/lilium_mathematical_art.png?v=5" alt="White Lilies by Rajveersinh Vishal Pardeshi" width="850"/>
   <p><strong>White Lilies by Rajveersinh Vishal Pardeshi</strong> — Master Composition (2400 × 2400 px)</p>
 </div>
 
@@ -30,7 +30,7 @@
 
 | Standalone 3D Botanical Bouquet (2400 × 1440 px) | Analytical Typeset Equation Panel (2400 × 960 px) |
 | :---: | :---: |
-| <img src="outputs/lily_bouquet.png?v=3" alt="Botanical 3D Render" width="420"/> | <img src="outputs/lily_equations.png?v=3" alt="Analytical Equation Panel" width="420"/> |
+| <img src="outputs/lily_bouquet.png?v=5" alt="Botanical 3D Render" width="420"/> | <img src="outputs/lily_equations.png?v=5" alt="Analytical Equation Panel" width="420"/> |
 
 </div>
 
@@ -226,8 +226,16 @@ I(\mathbf{x}) = k_a I_a \mathbf{c}_{\mathrm{base}} \mathrm{AO}(\mathbf{x}) + \su
 Tone mapping applies an ACES-Reinhard curve to ensure smooth highlight rolloff:
 
 ```math
-\mathbf{F}_\theta(u, v) = \left( \frac{1.35 I(1 + 1.35 I / L_{\mathrm{white}}^2)}{1 + 1.35 I} \right)^{1 / 2.2}
+\mathbf{F}_\theta(u, v) = \left( \frac{1.15 I(1 + 1.15 I / L_{\mathrm{white}}^2)}{1 + 1.15 I} \right)^{1 / 2.2}
 ```
+
+### 11. Physical Macro Optics & Camera Pipeline
+
+The rendering pipeline simulates physical camera lens optics and full-frame CMOS sensor response:
+1. **Macro Thin-Lens Depth-of-Field (DoF)**: 32-tap Fermat spiral circle of confusion ($C(z) = \min(r_{\max}, k_{\mathrm{CoC}} \frac{|z - 3.95|}{z})$) rendering creamy optical bokeh on background foliage while preserving tack-sharp focus on the hero center bloom.
+2. **Lateral Chromatic Aberration**: Quadratic radial dispersion shifting red wavelengths outward ($\delta_{\mathrm{CA}} r^2$) and blue inward, mimicking prime macro glass dispersion.
+3. **Optical Bloom & Halation**: High-energy thresholded specular halation on glistening dew droplets, wet stigma pads, and glossy nectar canals.
+4. **Sensor Vignetting & Micro-Grain**: Natural $\cos^4 \theta$ optical light falloff and deterministic ISO 100 CMOS subpixel micro-grain preventing synthetic color banding.
 
 ---
 
