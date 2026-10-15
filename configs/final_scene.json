@@ -20,16 +20,16 @@
       "intensity": 1.25
     },
     "fill_light": {
-      "direction": [0.55, 0.38, 0.74],
+      "direction": [0.55, 0.28, 0.62],
       "color": [0.88, 0.94, 1.0],
-      "intensity": 0.55
+      "intensity": 0.58
     },
     "rim_light": {
-      "direction": [0.20, 0.72, -0.66],
+      "direction": [0.15, 0.75, -0.64],
       "color": [0.96, 0.98, 0.92],
-      "intensity": 0.45
+      "intensity": 0.85
     },
-    "ambient_radiance": [0.15, 0.17, 0.15]
+    "ambient_radiance": [0.080, 0.092, 0.080]
   },
   "perianth_model": {
     "tepals_per_flower": 6,

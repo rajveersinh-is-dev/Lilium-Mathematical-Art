@@ -594,46 +594,89 @@ def shade_scene_numba(
                     roughness = 0.24; spec_k = 0.38; trans_k = 0.18
                 
             elif m_id == 7:  # Realistic Botanical Leaf
-                # Base lamina: deep, vibrant botanical emerald/forest green
-                r_alb = 0.032; g_alb = 0.175; b_alb = 0.038
+                # 1. Base lamina: deep, luxurious botanical emerald / dark viridian green
+                r_alb = 0.042 + 0.012 * s
+                g_alb = 0.265 + 0.035 * s
+                b_alb = 0.052 + 0.010 * s
                 
-                # Central longitudinal midrib vein (prominent spring-green canal)
-                mid_l = np.exp(-32.0 * (t * t))
-                r_alb = r_alb * (1.0 - mid_l) + 0.105 * mid_l
-                g_alb = g_alb * (1.0 - mid_l) + 0.285 * mid_l
-                b_alb = b_alb * (1.0 - mid_l) + 0.075 * mid_l
+                # 2. Central longitudinal midrib vein (prominent celadon / spring-green canal)
+                mid_l = np.exp(-22.0 * (t * t))
+                r_alb = r_alb * (1.0 - mid_l) + 0.140 * mid_l
+                g_alb = g_alb * (1.0 - mid_l) + 0.440 * mid_l
+                b_alb = b_alb * (1.0 - mid_l) + 0.110 * mid_l
                 
-                # Secondary Monocot Parallel Veins: 5 vein bundles across the blade
-                v1 = np.exp(-180.0 * ((abs_t - 0.20) ** 2))
-                v2 = np.exp(-180.0 * ((abs_t - 0.40) ** 2))
-                v3 = np.exp(-180.0 * ((abs_t - 0.60) ** 2))
-                v4 = np.exp(-180.0 * ((abs_t - 0.78) ** 2))
-                v5 = np.exp(-180.0 * ((abs_t - 0.92) ** 2))
-                sec_veins = (v1 + v2 + v3 + v4 + v5) * 0.020
-                g_alb = min(1.0, g_alb + sec_veins)
-                r_alb = min(1.0, r_alb + 0.35 * sec_veins)
+                # 3. Secondary Monocot Parallel Vascular Veins (4 smooth longitudinal bundles per half)
+                b1 = np.exp(-45.0 * ((abs_t - 0.22) ** 2))
+                b2 = np.exp(-45.0 * ((abs_t - 0.44) ** 2))
+                b3 = np.exp(-45.0 * ((abs_t - 0.66) ** 2))
+                b4 = np.exp(-45.0 * ((abs_t - 0.85) ** 2))
+                vein_bands = (b1 + b2 + b3 + b4) * 0.075
+                g_alb = min(1.0, g_alb + vein_bands)
+                r_alb = min(1.0, r_alb + 0.35 * vein_bands)
+                b_alb = min(1.0, b_alb + 0.18 * vein_bands)
                 
-                # Translucent leaf margins & tip (forward chlorophyll scattering)
-                if abs_t > 0.78:
-                    edge_w = (abs_t - 0.78) / 0.22
-                    g_alb = min(1.0, g_alb + 0.055 * edge_w)
-                    r_alb = min(1.0, r_alb + 0.022 * edge_w)
-                    trans_k = 0.16 + 0.26 * edge_w
+                # 4. Translucent leaf margins & tip (forward chlorophyll scattering)
+                if abs_t > 0.72:
+                    edge_w = (abs_t - 0.72) / 0.28
+                    g_alb = min(1.0, g_alb + 0.065 * edge_w)
+                    r_alb = min(1.0, r_alb + 0.025 * edge_w)
+                    trans_k = 0.32 + 0.30 * edge_w
                 else:
-                    trans_k = 0.12 + 0.08 * (s ** 2)
+                    trans_k = 0.25 + 0.15 * (s ** 1.5)
                     
-                # Acuminated tip color modulation
+                # 5. Basal petiole sheath gradient (succulent pale celery green near stem)
+                if s < 0.24:
+                    base_w = np.exp(-14.0 * (s ** 2))
+                    r_alb = r_alb * (1.0 - 0.35 * base_w) + 0.110 * (0.35 * base_w)
+                    g_alb = g_alb * (1.0 - 0.35 * base_w) + 0.360 * (0.35 * base_w)
+                    b_alb = b_alb * (1.0 - 0.35 * base_w) + 0.090 * (0.35 * base_w)
+                    
+                # 6. Acuminated tip color modulation
                 if s > 0.85:
                     tip_w = (s - 0.85) / 0.15
                     g_alb = min(1.0, g_alb + 0.030 * tip_w)
-                    trans_k = min(0.40, trans_k + 0.12 * tip_w)
+                    trans_k = min(0.50, trans_k + 0.15 * tip_w)
                 
+                # 7. Waxy cuticle specular reflectance & normal micro-relief
+                roughness = 0.16 * (1.0 - mid_l) + 0.24 * mid_l
+                spec_k = 0.60
+                
+                # 8. Glistening fresh morning dew / water droplets on leaves
+                is_leaf_drop = False
+                if 0.20 < s < 0.85 and abs_t < 0.78:
+                    ld_cell_s = s * 16.0
+                    ld_cell_t = t * 12.0
+                    ld_is = int(ld_cell_s)
+                    ld_it = int(ld_cell_t)
+                    ld_hash = np.sin(float(ld_is) * 419.3 + float(ld_it) * 631.1) * 31849.7
+                    ld_rnd = ld_hash - np.floor(ld_hash)
+                    
+                    if ld_rnd > 0.94:
+                        ldf_s = ld_cell_s - float(ld_is) - 0.5
+                        ldf_t = ld_cell_t - float(ld_it) - 0.5
+                        drop_r2 = ldf_s * ldf_s + ldf_t * ldf_t
+                        if drop_r2 < 0.14:
+                            roughness = 0.03
+                            spec_k = 0.95
+                            is_leaf_drop = True
+                            nx += ldf_s * 1.8
+                            ny += ldf_t * 1.8
+                            
+                # 9. Analytical 3D Normal Relief: band-limited midrib groove, vein rib slopes & waxy cell grain
+                if not is_leaf_drop:
+                    mid_norm = -0.14 * t * np.exp(-20.0 * (t * t))
+                    t_sign = 1.0 if t >= 0.0 else -1.0
+                    slope_b1 = -90.0 * (abs_t - 0.22) * b1 * t_sign
+                    slope_b2 = -90.0 * (abs_t - 0.44) * b2 * t_sign
+                    slope_b3 = -90.0 * (abs_t - 0.66) * b3 * t_sign
+                    vein_slope = (slope_b1 + slope_b2 + slope_b3) * 0.0016
+                    cell_grain = np.sin(30.0 * wx) * np.cos(30.0 * wy) * 0.010
+                    nx += mid_norm + vein_slope + cell_grain
+                    ny += mid_norm * 0.4 + cell_grain
+                    nz += cell_grain
+                    
                 n_len = max(1e-6, (nx*nx + ny*ny + nz*nz)**0.5)
                 nx /= n_len; ny /= n_len; nz /= n_len
-                
-                # Waxy cuticle specular reflectance
-                roughness = 0.18 * (1.0 - mid_l) + 0.26 * mid_l
-                spec_k = 0.55
                 
             elif m_id == 8:  # Tapered Swelling Lily Bud (Jade/celadon base transitioning to creamy ivory tip)
                 # Base is fresh celadon green, distal half transitions to ivory
@@ -726,15 +769,26 @@ def shade_scene_numba(
             s1_lobe2 = (n_dot_h1 ** spec_exp2) * (spec_k * 0.6)
             s1 = (s1_lobe1 + s1_lobe2) * (0.04 + 0.96 * fresnel) if d1 > 0.0 else 0.0
             
-            # Soft shadow subsurface light bleed (warm glow inside petal shadows coupled to albedo)
-            bounce_scale = 0.12 * trans_k * (1.0 - shadow_factor)
-            bounce_r = bounce_scale * r_alb * 1.08
-            bounce_g = bounce_scale * g_alb * 1.02
-            bounce_b = bounce_scale * b_alb * 0.95
+            # Soft shadow subsurface light bleed (warm glow inside petal and leaf shadows coupled to albedo)
+            if m_id == 7:
+                bounce_scale = 0.22 * trans_k * (1.0 - shadow_factor)
+                bounce_r = bounce_scale * r_alb * 0.85
+                bounce_g = bounce_scale * g_alb * 1.45  # Radiant emerald subsurface glow in leaf shadows
+                bounce_b = bounce_scale * b_alb * 0.75
+            else:
+                bounce_scale = 0.12 * trans_k * (1.0 - shadow_factor)
+                bounce_r = bounce_scale * r_alb * 1.08
+                bounce_g = bounce_scale * g_alb * 1.02
+                bounce_b = bounce_scale * b_alb * 0.95
             
             # Luminous botanical shadow response:
-            # Translucent petals maintain clear contact shadow depth with forward subsurface glow
-            diffuse_shadow = (0.05 + 0.95 * shadow_factor) if (m_id == 1 or m_id == 2) else shadow_factor
+            # Translucent petals and foliage maintain clear contact shadow depth with forward subsurface glow
+            if m_id == 1 or m_id == 2:
+                diffuse_shadow = 0.05 + 0.95 * shadow_factor
+            elif m_id == 7:
+                diffuse_shadow = 0.18 + 0.82 * shadow_factor  # Translucent leaf chlorophyll penetration
+            else:
+                diffuse_shadow = shadow_factor
             
             c_r += l1_c0 * (r_alb * (d1 * diffuse_shadow + t1 * max(0.20, shadow_factor)) + bounce_r + s1 * shadow_factor)
             c_g += l1_c1 * (g_alb * (d1 * diffuse_shadow + t1 * max(0.20, shadow_factor)) + bounce_g + s1 * shadow_factor)
@@ -749,9 +803,10 @@ def shade_scene_numba(
             h2_x /= len_h2; h2_y /= len_h2; h2_z /= len_h2
             n_dot_h2 = max(0.0, nx * h2_x + ny * h2_y + nz * h2_z)
             s2 = (n_dot_h2 ** spec_exp1) * spec_k if d2 > 0.0 else 0.0
-            c_r += l2_c0 * (r_alb * (d2 + t2) + s2) * ao_total
-            c_g += l2_c1 * (g_alb * (d2 + t2) + s2) * ao_total
-            c_b += l2_c2 * (b_alb * (d2 + t2) + s2) * ao_total
+            ao_fill = max(0.42, ao_total) if m_id == 7 else ao_total
+            c_r += l2_c0 * (r_alb * (d2 + t2) + s2) * ao_fill
+            c_g += l2_c1 * (g_alb * (d2 + t2) + s2) * ao_fill
+            c_b += l2_c2 * (b_alb * (d2 + t2) + s2) * ao_fill
             
             # --- RIM / BACK LIGHT ---
             n_dot_l3 = nx * rim_dir[0] + ny * rim_dir[1] + nz * rim_dir[2]
@@ -763,7 +818,7 @@ def shade_scene_numba(
             n_dot_h3 = max(0.0, nx * h3_x + ny * h3_y + nz * h3_z)
             s3 = (n_dot_h3 ** spec_exp1) * spec_k if d3 > 0.0 else 0.0
             
-            edge_glow = fresnel * trans_k * 0.40
+            edge_glow = fresnel * trans_k * (0.65 if m_id == 7 else 0.40)
             c_r += l3_c0 * (r_alb * (d3 + t3 + edge_glow) + s3)
             c_g += l3_c1 * (g_alb * (d3 + t3 + edge_glow) + s3)
             c_b += l3_c2 * (b_alb * (d3 + t3 + edge_glow) + s3)
@@ -854,8 +909,8 @@ def apply_optical_bloom_glints(
                             sg = hdr_rgb[iy, ix, 1]
                             sb = hdr_rgb[iy, ix, 2]
                             slum = 0.2126 * sr + 0.7152 * sg + 0.0722 * sb
-                            if slum > 1.45:
-                                excess = slum - 1.45
+                            if slum > 1.65:
+                                excess = slum - 1.65
                                 d2 = float(dx * dx + dy * dy)
                                 gw = np.exp(-d2 * inv_sigma2)
                                 acc_br += sr * gw * excess
