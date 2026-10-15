@@ -20,7 +20,7 @@
 ## Master Artwork
 
 <div align="center">
-  <img src="outputs/lilium_mathematical_art.png?v=5" alt="White Lilies by Rajveersinh Vishal Pardeshi" width="850"/>
+  <img src="outputs/lilium_mathematical_art.png?v=6" alt="White Lilies by Rajveersinh Vishal Pardeshi" width="850"/>
   <p><strong>White Lilies by Rajveersinh Vishal Pardeshi</strong> — Master Composition (2400 × 2400 px)</p>
 </div>
 
@@ -30,7 +30,7 @@
 
 | Standalone 3D Botanical Bouquet (2400 × 1440 px) | Analytical Typeset Equation Panel (2400 × 960 px) |
 | :---: | :---: |
-| <img src="outputs/lily_bouquet.png?v=5" alt="Botanical 3D Render" width="420"/> | <img src="outputs/lily_equations.png?v=5" alt="Analytical Equation Panel" width="420"/> |
+| <img src="outputs/lily_bouquet.png?v=6" alt="Botanical 3D Render" width="420"/> | <img src="outputs/lily_equations.png?v=6" alt="Analytical Equation Panel" width="420"/> |
 
 </div>
 
