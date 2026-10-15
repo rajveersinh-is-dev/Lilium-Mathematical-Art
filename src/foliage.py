@@ -588,7 +588,8 @@ class BouquetScene:
         stem_tie = np.array([0.0, -0.62, -0.04])
         stem_base = np.array([0.0, -1.05, -0.06])
         
-        # 8 Flowers arranged with authentic florist hierarchy and natural 3D depth:
+        # 9 Botanical Elements with authentic florist hierarchy, varied viewing angles,
+        # natural developmental stages (open trumpets, side profiles, deep midground, and fresh developing buds)
         flower_configs = [
             # 1. Hero Focal Blossom: Majestic central anchor, broad and radiant
             {
@@ -604,41 +605,41 @@ class BouquetScene:
             # 2. Right Mid-Tier Trumpet: Nestled right of focal bloom, flaring outward
             {
                 "id": 2,
-                "center": np.array([0.58, -0.06, 0.28]),
-                "facing": normalize(np.array([0.38, 0.12, 0.92])),
+                "center": np.array([0.54, -0.08, 0.28]),
+                "facing": normalize(np.array([0.38, 0.10, 0.92])),
                 "up": normalize(np.array([-0.12, 0.98, -0.15])),
                 "scale": 0.96,
                 "opening": 0.96,
                 "is_bud": False,
                 "roll": -0.28
             },
-            # 3. Left Mid-Tier Trumpet: Nestled left of focal bloom, flaring outward
+            # 3. Left Profile Trumpet Blossom: Dramatic 3D side profile showcasing long perianth tube & reflexed sepals
             {
                 "id": 3,
-                "center": np.array([-0.62, 0.10, 0.26]),
-                "facing": normalize(np.array([-0.42, 0.15, 0.90])),
-                "up": normalize(np.array([0.15, 0.97, -0.18])),
-                "scale": 0.96,
-                "opening": 0.96,
+                "center": np.array([-0.88, 0.16, 0.15]),
+                "facing": normalize(np.array([-0.86, 0.14, 0.48])),
+                "up": normalize(np.array([0.18, 0.94, -0.28])),
+                "scale": 0.90,
+                "opening": 0.88,
                 "is_bud": False,
-                "roll": -0.35
+                "roll": 0.18
             },
-            # 4. Crown Apex Blossom: The tall spire of the bouquet reaching toward the light
+            # 4. Upper Right Bower Blossom: Youthful trumpet framing upper right flank
             {
                 "id": 4,
-                "center": np.array([0.04, 0.70, 0.14]),
-                "facing": normalize(np.array([0.06, 0.36, 0.93])),
-                "up": normalize(np.array([-0.05, 0.88, -0.47])),
-                "scale": 0.92,
-                "opening": 0.90,
+                "center": np.array([0.68, 0.38, 0.14]),
+                "facing": normalize(np.array([0.48, 0.34, 0.80])),
+                "up": normalize(np.array([-0.20, 0.88, -0.42])),
+                "scale": 0.88,
+                "opening": 0.84,
                 "is_bud": False,
-                "roll": 0.25
+                "roll": -0.26
             },
             # 5. Lower Cascade Left Blossom: Cradled below hero bloom, nodding downward
             {
                 "id": 5,
-                "center": np.array([-0.48, -0.38, 0.28]),
-                "facing": normalize(np.array([-0.26, -0.34, 0.90])),
+                "center": np.array([-0.44, -0.38, 0.32]),
+                "facing": normalize(np.array([-0.22, -0.38, 0.89])),
                 "up": normalize(np.array([0.14, 0.82, 0.55])),
                 "scale": 0.90,
                 "opening": 0.88,
@@ -648,50 +649,64 @@ class BouquetScene:
             # 6. Lower Cascade Right Blossom: Cradled below hero bloom, nodding downward-right
             {
                 "id": 6,
-                "center": np.array([0.44, -0.42, 0.26]),
-                "facing": normalize(np.array([0.24, -0.36, 0.90])),
+                "center": np.array([0.42, -0.42, 0.26]),
+                "facing": normalize(np.array([0.24, -0.38, 0.89])),
                 "up": normalize(np.array([-0.12, 0.82, 0.55])),
                 "scale": 0.90,
                 "opening": 0.88,
                 "is_bud": False,
                 "roll": 0.22
             },
-            # 7. Left Profile Trumpet Blossom: Side silhouette showcasing elegant perianth tube
+            # 7. Deep Midground Blossom: Nestled deeper within the bouquet, creating true 3D spatial depth
             {
                 "id": 7,
-                "center": np.array([-0.96, 0.20, 0.10]),
-                "facing": normalize(np.array([-0.74, 0.20, 0.64])),
-                "up": normalize(np.array([0.18, 0.92, -0.34])),
-                "scale": 0.88,
-                "opening": 0.82,
+                "center": np.array([-0.26, 0.38, 0.02]),
+                "facing": normalize(np.array([-0.18, 0.42, 0.88])),
+                "up": normalize(np.array([0.12, 0.88, -0.45])),
+                "scale": 0.84,
+                "opening": 0.74,
                 "is_bud": False,
-                "roll": 0.18
+                "roll": 0.10
             },
-            # 8. Upper Right Bower Blossom: Youthful trumpet framing upper right flank
+            # 8. Crown Apex Developing Bud: Slender jade-and-ivory spire reaching upward to the light
             {
                 "id": 8,
-                "center": np.array([0.78, 0.42, 0.12]),
-                "facing": normalize(np.array([0.52, 0.32, 0.79])),
-                "up": normalize(np.array([-0.20, 0.88, -0.42])),
-                "scale": 0.86,
-                "opening": 0.80,
-                "is_bud": False,
-                "roll": -0.26
+                "center": np.array([0.06, 0.74, 0.12]),
+                "facing": normalize(np.array([0.06, 0.88, 0.46])),
+                "up": normalize(np.array([-0.05, 0.46, -0.88])),
+                "scale": 0.82,
+                "opening": 0.15,
+                "is_bud": True,
+                "roll": 0.12
+            },
+            # 9. Upper-Left Satellite Bud: Fresh youthful bud extending naturally to the upper left
+            {
+                "id": 9,
+                "center": np.array([-0.60, 0.54, 0.08]),
+                "facing": normalize(np.array([-0.52, 0.74, 0.42])),
+                "up": normalize(np.array([0.24, 0.48, -0.84])),
+                "scale": 0.76,
+                "opening": 0.12,
+                "is_bud": True,
+                "roll": -0.15
             }
         ]
         
         self.flowers = flower_configs
         
-        # Build Stems for each flower
+        # Build Stems for each flower and bud
+        n_fl = len(flower_configs)
         for i, fc in enumerate(flower_configs):
             f_center = fc["center"]
             f_facing = fc["facing"]
             scale = fc["scale"]
+            is_bud = fc.get("is_bud", False)
             
-            p3 = f_center - 0.18 * scale * f_facing
+            p3_offset = (0.10 if is_bud else 0.18) * scale
+            p3 = f_center - p3_offset * f_facing
             p2 = p3 - 0.26 * f_facing - np.array([0.0, 0.16, 0.12])
             
-            ang_spiral = i * (2.0 * np.pi / 8.0)
+            ang_spiral = i * (2.0 * np.pi / n_fl)
             p1 = stem_tie + np.array([
                 0.080 * np.cos(ang_spiral),
                 self.rng.uniform(-0.02, 0.02),
@@ -733,9 +748,14 @@ class BouquetScene:
                 v_perp = v_rel - d_par[:, None] * facing[None, :]
                 d_perp = np.linalg.norm(v_perp, axis=1)
                 
-                # Trumpet perianth conical envelope
-                in_longitudinal = (d_par >= -0.10 * scale) & (d_par <= 0.46 * scale)
-                r_envelope = scale * np.clip(0.18 + 1.10 * np.maximum(0.0, d_par / scale + 0.10), 0.18, 0.65) + 0.04
+                # Trumpet perianth or bud spindle conical envelope
+                is_b = fc.get("is_bud", False)
+                if is_b:
+                    in_longitudinal = (d_par >= -0.06 * scale) & (d_par <= 0.70 * scale)
+                    r_envelope = scale * 0.18 + 0.03
+                else:
+                    in_longitudinal = (d_par >= -0.10 * scale) & (d_par <= 0.46 * scale)
+                    r_envelope = scale * np.clip(0.18 + 1.10 * np.maximum(0.0, d_par / scale + 0.10), 0.18, 0.65) + 0.04
                 if np.any(in_longitudinal & (d_perp <= r_envelope)):
                     return False
 
@@ -784,14 +804,14 @@ class BouquetScene:
                 leaf = LilyLeaf(
                     attach_point=attach,
                     direction=dir_vec,
-                    length=self.rng.uniform(1.05, 1.25),
-                    max_width=self.rng.uniform(0.14, 0.17),
-                    droop=self.rng.uniform(0.14, 0.20),
-                    curl=self.rng.uniform(-0.02, 0.02),
-                    twist=self.rng.uniform(-0.15, 0.15),
-                    arch=self.rng.uniform(0.10, 0.14),
-                    wave=0.005,
-                    roll=self.rng.uniform(-0.25, 0.25),
+                    length=self.rng.uniform(0.88, 1.20),
+                    max_width=self.rng.uniform(0.13, 0.18),
+                    droop=self.rng.uniform(0.24, 0.36),
+                    curl=self.rng.uniform(-0.06, 0.06),
+                    twist=self.rng.uniform(-0.35, 0.35),
+                    arch=self.rng.uniform(0.14, 0.22),
+                    wave=self.rng.uniform(0.006, 0.012),
+                    roll=self.rng.uniform(-0.40, 0.40),
                     seed=int(self.rng.randint(10000, 99999))
                 )
                 if try_add_leaf(leaf):

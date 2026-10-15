@@ -510,33 +510,41 @@ def shade_scene_numba(
                         
                 # 7. Glistening Fresh Water / Dew Droplets
                 is_droplet = False
-                if s > 0.32 and abs_t < 0.78:
-                    d_cell_s = s * 14.0
-                    d_cell_t = t * 12.0
-                    d_is = int(d_cell_s)
-                    d_it = int(d_cell_t)
-                    d_hash = np.sin(float(d_is) * 317.3 + float(d_it) * 583.1) * 28472.9
-                    d_rnd = d_hash - np.floor(d_hash)
+                if s > 0.28 and abs_t < 0.82:
+                    d_u = s * 16.5 + np.sin(s * 8.3) * 0.4
+                    d_v = (t + 1.0) * 11.2 + np.cos(s * 9.7) * 0.3
+                    d_iu = int(np.floor(d_u))
+                    d_iv = int(np.floor(d_v))
                     
-                    if d_rnd > 0.93:
-                        df_s = d_cell_s - float(d_is) - 0.5
-                        df_t = d_cell_t - float(d_it) - 0.5
-                        drop_r2 = df_s * df_s + df_t * df_t
-                        if drop_r2 < 0.13:
-                            roughness = 0.025
-                            spec_k = 0.98
+                    h1 = np.sin(float(d_iu) * 157.1 + float(d_iv) * 311.7) * 43758.5453
+                    r_drop = h1 - np.floor(h1)
+                    
+                    if r_drop > 0.945:
+                        h2 = np.sin(float(d_iu) * 269.5 + float(d_iv) * 183.3) * 28472.9
+                        r_ox = (h2 - np.floor(h2)) * 0.6 + 0.2
+                        h3 = np.sin(float(d_iu) * 419.2 + float(d_iv) * 571.1) * 39182.3
+                        r_oy = (h3 - np.floor(h3)) * 0.6 + 0.2
+                        
+                        df_u = d_u - float(d_iu) - r_ox
+                        df_v = d_v - float(d_iv) - r_oy
+                        drop_r2 = df_u * df_u + df_v * df_v
+                        
+                        max_r2 = 0.08 + 0.08 * ((r_drop - 0.945) / 0.055)
+                        if drop_r2 < max_r2:
+                            roughness = 0.020
+                            spec_k = 0.99
                             is_droplet = True
-                            nx += df_s * 1.8
-                            ny += df_t * 1.8
-                            # Physical meniscus contact shadow & caustic refraction
-                            if drop_r2 > 0.075:
-                                r_alb *= 0.62
-                                g_alb *= 0.62
-                                b_alb *= 0.62
-                            elif drop_r2 < 0.025:
-                                r_alb = min(1.0, r_alb * 1.25)
-                                g_alb = min(1.0, g_alb * 1.25)
-                                b_alb = min(1.0, b_alb * 1.25)
+                            nx += df_u * 2.2
+                            ny += df_v * 2.2
+                            norm_r2 = drop_r2 / max_r2
+                            if norm_r2 > 0.60:
+                                r_alb *= 0.58
+                                g_alb *= 0.58
+                                b_alb *= 0.58
+                            elif norm_r2 < 0.22:
+                                r_alb = min(1.0, r_alb * 1.35)
+                                g_alb = min(1.0, g_alb * 1.35)
+                                b_alb = min(1.0, b_alb * 1.35)
                             
                 # 8. Analytical Petal Satin Cuticle & Isotropic Micro-relief
                 if not is_droplet:
@@ -650,32 +658,41 @@ def shade_scene_numba(
                 
                 # 8. Glistening fresh morning dew / water droplets on leaves
                 is_leaf_drop = False
-                if 0.18 < s < 0.88 and abs_t < 0.80:
-                    ld_cell_s = s * 16.0
-                    ld_cell_t = t * 12.0
-                    ld_is = int(ld_cell_s)
-                    ld_it = int(ld_cell_t)
-                    ld_hash = np.sin(float(ld_is) * 419.3 + float(ld_it) * 631.1) * 31849.7
-                    ld_rnd = ld_hash - np.floor(ld_hash)
+                if 0.16 < s < 0.88 and abs_t < 0.82:
+                    ld_u = s * 18.2 + np.sin(s * 7.5) * 0.35
+                    ld_v = (t + 1.0) * 12.4 + np.cos(s * 8.8) * 0.30
+                    ld_iu = int(np.floor(ld_u))
+                    ld_iv = int(np.floor(ld_v))
                     
-                    if ld_rnd > 0.93:
-                        ldf_s = ld_cell_s - float(ld_is) - 0.5
-                        ldf_t = ld_cell_t - float(ld_it) - 0.5
-                        drop_r2 = ldf_s * ldf_s + ldf_t * ldf_t
-                        if drop_r2 < 0.14:
-                            roughness = 0.02
-                            spec_k = 0.98
+                    lh1 = np.sin(float(ld_iu) * 419.3 + float(ld_iv) * 631.1) * 31849.7
+                    ld_rnd = lh1 - np.floor(lh1)
+                    
+                    if ld_rnd > 0.940:
+                        lh2 = np.sin(float(ld_iu) * 317.1 + float(ld_iv) * 789.5) * 41285.3
+                        l_ox = (lh2 - np.floor(lh2)) * 0.6 + 0.2
+                        lh3 = np.sin(float(ld_iu) * 523.4 + float(ld_iv) * 241.8) * 19482.7
+                        l_oy = (lh3 - np.floor(lh3)) * 0.6 + 0.2
+                        
+                        ldf_u = ld_u - float(ld_iu) - l_ox
+                        ldf_v = ld_v - float(ld_iv) - l_oy
+                        drop_r2 = ldf_u * ldf_u + ldf_v * ldf_v
+                        
+                        l_max_r2 = 0.07 + 0.08 * ((ld_rnd - 0.940) / 0.060)
+                        if drop_r2 < l_max_r2:
+                            roughness = 0.018
+                            spec_k = 0.99
                             is_leaf_drop = True
-                            nx += ldf_s * 1.8
-                            ny += ldf_t * 1.8
-                            if drop_r2 > 0.08:
-                                r_alb *= 0.50
-                                g_alb *= 0.50
-                                b_alb *= 0.50
-                            elif drop_r2 < 0.025:
-                                r_alb = min(1.0, r_alb * 1.30)
-                                g_alb = min(1.0, g_alb * 1.30)
-                                b_alb = min(1.0, b_alb * 1.30)
+                            nx += ldf_u * 2.2
+                            ny += ldf_v * 2.2
+                            l_norm_r2 = drop_r2 / l_max_r2
+                            if l_norm_r2 > 0.60:
+                                r_alb *= 0.52
+                                g_alb *= 0.52
+                                b_alb *= 0.52
+                            elif l_norm_r2 < 0.22:
+                                r_alb = min(1.0, r_alb * 1.35)
+                                g_alb = min(1.0, g_alb * 1.35)
+                                b_alb = min(1.0, b_alb * 1.35)
                             
                 # 9. Analytical 3D Normal Relief: band-limited midrib groove, vein rib slopes & waxy cell grain
                 if not is_leaf_drop:

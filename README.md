@@ -66,7 +66,7 @@ The composition is structured into two seamlessly integrated vertical regions:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Upper Botanical Domain (60% — 2400 × 1440 px)**: A photorealistic, analytical 3D synthesis of a bouquet of 8 blooming white lilies (_Lilium candidum / Oriental hybrid_) with curving Bézier stems and arching lanceolate leaves. Lighting features dual-lobe microfacet specular highlights, forward subsurface translucency, contact ambient occlusion (SSAO), 3D carmine nectar papillae, and golden-amber pollen anthers.
+1. **Upper Botanical Domain (60% — 2400 × 1440 px)**: A photorealistic, analytical 3D synthesis of a bouquet of 9 botanical elements (blooming white lilies and developing jade-and-ivory buds, _Lilium candidum / Oriental hybrid 'Casa Blanca'_) with curving Bézier stems and arching lanceolate leaves. Lighting features physically based path tracing with Random Walk subsurface scattering, dual-lobe microfacet specular highlights, Voronoi epidermal papillae, deep crimson nectar markings, versatile anther thecae coated in golden pollen, and 105mm macro photographic optics.
 2. **Mathematical Panel (40% — 2400 × 960 px)**: A pure white mathematical panel starting directly beneath the bouquet with no visual border. It presents:
    - Centered title: **White Lilies by Rajveersinh Vishal Pardeshi**
    - Exact explanatory sentence:
@@ -108,17 +108,17 @@ F(x) = \left\lfloor 255 \left( \frac{1.25 x \left(1 + \frac{1.25 x}{L_w^2}\right
 
 ### 2. Multi-Flower Scene Ray-Casting & Depth Composition
 
-The complete bouquet $\mathbf{H}_v(x, y)$ evaluates the optical contribution across $N=8$ flowers with depth-ordered occlusion:
+The complete bouquet $\mathbf{H}_v(x, y)$ evaluates the optical contribution across $N=9$ botanical elements (7 open/nodding blossoms and 2 developing buds) with depth-ordered occlusion:
 
 ```math
-\mathbf{H}_v(x, y) = \sum_{j=1}^{8} \left( \prod_{r=1}^{j-1} \left[ 1 - \mathcal{A}_{1000, r}(x, y) \right] \right) \left( 1 - e^{-1000\left(r - \frac{1}{2}\right)} \mathcal{U}_r(x, y) \right) \mathbf{L}_{v, j}(x, y) + \mathbf{B}_v(x, y)
+\mathbf{H}_v(x, y) = \sum_{j=1}^{9} \left( \prod_{r=1}^{j-1} \left[ 1 - \mathcal{A}_{1000, r}(x, y) \right] \right) \left( 1 - e^{-1000\left(r - \frac{1}{2}\right)} \mathcal{U}_r(x, y) \right) \mathbf{L}_{v, j}(x, y) + \mathbf{B}_v(x, y)
 ```
 
 where $\mathcal{A}_{\kappa, j}(x, y) = \frac{1}{1 + e^{-\kappa(z_{\mathrm{cam}} - z_j(x, y))}}$ is the soft Z-buffer visibility operator and $\mathbf{B}_v(x, y)$ represents the chiaroscuro forest background gradient.
 
 ### 3. Parametric Tepal 2-Manifold
 
-Each tepal $k \in \{0, \dots, 5\}$ of flower $j \in \{1, \dots, 8\}$ is an embedded 2-manifold in $\mathbb{R}^3$ parameterized over $(s, t) \in [0, 1] \times [-1, 1]$:
+Each tepal $k \in \{0, \dots, 5\}$ of flower $j \in \{1, \dots, 9\}$ is an embedded 2-manifold in $\mathbb{R}^3$ parameterized over $(s, t) \in [0, 1] \times [-1, 1]$:
 
 ```math
 \mathbf{S}_{j,k}(s, t) = \mathbf{p}_{j,k}(s) + t\,w_k(s)\,\mathbf{B}_{j,k}(s) + c_k(s, t)\,\mathbf{N}_{j,k}(s)
@@ -235,7 +235,23 @@ The rendering pipeline simulates physical camera lens optics and full-frame CMOS
 1. **Macro Thin-Lens Depth-of-Field (DoF)**: 32-tap Fermat spiral circle of confusion ($C(z) = \min(r_{\max}, k_{\mathrm{CoC}} \frac{|z - 3.95|}{z})$) rendering creamy optical bokeh on background foliage while preserving tack-sharp focus on the hero center bloom.
 2. **Lateral Chromatic Aberration**: Quadratic radial dispersion shifting red wavelengths outward ($\delta_{\mathrm{CA}} r^2$) and blue inward, mimicking prime macro glass dispersion.
 3. **Optical Bloom & Halation**: High-energy thresholded specular halation on glistening dew droplets, wet stigma pads, and glossy nectar canals.
-4. **Sensor Vignetting & Micro-Grain**: Natural $\cos^4 \theta$ optical light falloff and deterministic ISO 100 CMOS subpixel micro-grain preventing synthetic color banding.
+### 12. Dual-Engine Rendering Architecture
+
+The project implements a versatile **dual-engine rendering architecture** designed to bridge rigorous mathematical verification with production-grade botanical photorealism:
+
+1. **Production Engine — Physically Based Cycles OptiX Path Tracing (`src/blender_cycles_bouquet.py`)**:
+   - Evaluates the exact parametric manifolds $\mathbf{S}_{j,k}(s, t)$, Bézier stems, lanceolate leaves, calyx receptacles, ovary columns, and versatile anthers within Blender's Cycles engine.
+   - **Random Walk Subsurface Scattering (SSS)**: Simulates multi-layer light transport through thin cellular perianth tissues ($d_{\mathrm{radius}} = [0.28, 0.14, 0.06]\,\mu\mathrm{m}$), revealing delicate edge translucency and deep vein shadows.
+   - **Voronoi Papillae & Nectary Furrow**: Synthesizes 3D raised tactile nodules and intense carmine nectar flecks at the petal throat, complemented by a vibrant celery-lime longitudinal furrow.
+   - **Studio Chiaroscuro Illumination**: Employs a 4-point studio rig (460W soft key octabox, 110W fill softbox, 360W rim backlight, and a 240W focused chiaroscuro backdrop halo) casting soft volumetric shadows across a deep botanical forest backdrop.
+   - **Photographic Optics**: 105mm macro prime lens with physical aperture $f/14$, calibrated circle-of-confusion depth of field focused on the hero blossom, and filmic AgX Medium High Contrast tone mapping.
+
+2. **Analytical Software Engine — Numba JIT Parallelized Rasterizer (`src/renderer.py`)**:
+   - An independent, zero-external-dependency software renderer implemented strictly in Python and Numba.
+   - Evaluates screen-space barycentric rasterization, analytical soft Z-buffering, dual-lobe microfacet BRDF, SSAO cavity shading, and thin-lens DoF in under 6 seconds.
+   - Provides instant first-principles verification and ensures the test suite runs deterministically on any standard CI/CD environment.
+
+The entry point `scripts/render_bouquet.py` automatically detects the local hardware and Blender environment: it invokes the Cycles OptiX path tracer for production-quality renders when available, with automatic fallback to the Numba rasterizer.
 
 ---
 
@@ -263,6 +279,7 @@ Lilium-Mathematical-Art/
 │   ├── materials.py        # Dual-lobe BRDF, throat star, vein fields, carmine papillae
 │   ├── lighting.py         # 3-point studio lighting, chiaroscuro forest background
 │   ├── renderer.py         # Numba-parallelized Z-buffer rasterizer & screen-space shader
+│   ├── blender_cycles_bouquet.py # Physically based Cycles OptiX GPU path tracing engine
 │   ├── math_spec.py        # Formal LaTeX and Typst mathematical specifications
 │   └── composition.py      # Master canvas assembler (2400 × 2400 px composite)
 │

@@ -208,24 +208,38 @@ class LilyTepal:
             # Gentle margin wave modulation along edges
             ruffle_mod = 1.0 + 0.035 * (s_vals ** 1.3) * np.sin(2.0 * np.pi * self.ruffle_freq * s_vals + self.phase)
             w_profile = w_profile * ruffle_mod
+            
+            # Basal continuous perianth tube: tepals seamlessly fuse at the receptacle cup (s < 0.28)
+            # preventing artificial dark gaps between petals at the flower throat
+            w_tube = (np.pi / 6.0) * r_s * (np.maximum(0.0, 1.0 - s_vals / 0.28) ** 1.6)
+            w_profile = np.maximum(w_profile, w_tube)
+            
             W = w_profile[:, None] * T
             
             # 4. Botanical 3D Cross-Section Architecture:
             # - Basal concave cup: inside throat (s < 0.35)
-            throat_cup = -0.024 * self.length * np.exp(-12.0 * (s_vals ** 1.8))[:, None] * (1.0 - T ** 2)
-            # - Concave inner midrib camber: depression along center (T=0) creating an authentic boat-shaped petal
-            midrib_camber = -0.020 * self.length * (np.sin(np.pi * (s_vals ** 0.85)) ** 1.2)[:, None] * (1.0 - T ** 2)
-            # - Ventral nectary furrow
-            furrow_mask = (s_vals > 0.05) & (s_vals < 0.44)
-            furrow_s = np.where(furrow_mask, np.sin(np.pi * (s_vals - 0.05) / 0.39), 0.0)
-            ventral_furrow = -0.014 * self.length * furrow_s[:, None] * np.exp(-32.0 * (T ** 2))
-            # - Vertical margin waves
+            throat_cup = -0.032 * self.length * np.exp(-10.0 * (s_vals ** 1.8))[:, None] * (1.0 - T ** 2)
+            
+            # - Botanical 3D cross-section camber:
+            # Inner petals have a deep concave boat-shaped trough;
+            # Outer sepals have an arched convex dorsal keel with recurved edges
+            if self.is_inner:
+                midrib_camber = -0.046 * self.length * (np.sin(np.pi * (s_vals ** 0.85)) ** 1.1)[:, None] * (1.0 - T ** 2)
+            else:
+                midrib_camber = -0.034 * self.length * (np.sin(np.pi * (s_vals ** 0.85)) ** 1.1)[:, None] * (1.0 - (T ** 2) ** 1.2)
+                
+            # - Ventral nectary furrow along midrib
+            furrow_mask = (s_vals > 0.04) & (s_vals < 0.46)
+            furrow_s = np.where(furrow_mask, np.sin(np.pi * (s_vals - 0.04) / 0.42), 0.0)
+            ventral_furrow = -0.016 * self.length * furrow_s[:, None] * np.exp(-24.0 * (T ** 2))
+            
+            # - Vertical margin waves and organic edge undulation (multi-harmonic ruffles)
+            ruffle_scale = (0.024 if self.is_inner else 0.018) * self.length
             edge_ruffle = (
-                self.ruffle_amplitude
-                * self.length
-                * (S ** 1.3)
+                ruffle_scale
+                * (S ** 1.2)
                 * (T ** 2)
-                * np.sin(2.0 * np.pi * self.ruffle_freq * S + self.phase)
+                * (np.sin(2.0 * np.pi * self.ruffle_freq * S + self.phase) + 0.35 * np.sin(4.0 * np.pi * self.ruffle_freq * S))
             )
             # Smoothly taper margin ruffles and camber to 0 at the acute apex tip (s=1)
             # so all vertices across the width converge cleanly into a single sharp, organic pointed tip
@@ -408,40 +422,138 @@ class LilyFlower:
             all_mat_ids.append(np.full(len(t_verts), mat_id, dtype=np.int32))
             vert_offset += len(t_verts)
             
+        # 1b. Floral Receptacle Cup & Central Ovary:
+        # Continuous succulent celery-lime cup and central ovary column sealing the perianth tube
+        # and providing natural anatomical attachment for tepals, filaments, and style
+        if not self.is_bud:
+            n_recep_rad = 24
+            n_recep_rings = 5
+            z_min_recep = -0.055 * self.scale
+            z_max_recep = 0.035 * self.scale
+            
+            recep_verts_list = []
+            recep_uvs_list = []
+            recep_faces_list = []
+            
+            # Central floor vertex
+            recep_verts_list.append(np.array([0.0, 0.0, z_min_recep]))
+            recep_uvs_list.append([0.0, 0.0])
+            
+            for ring in range(1, n_recep_rings + 1):
+                frac = ring / n_recep_rings
+                r_ring = (0.018 + 0.036 * (frac ** 1.3)) * self.scale
+                z_ring = z_min_recep + frac * (z_max_recep - z_min_recep)
+                for j in range(n_recep_rad):
+                    th = j * (2.0 * np.pi / n_recep_rad)
+                    recep_verts_list.append(np.array([r_ring * np.cos(th), r_ring * np.sin(th), z_ring]))
+                    recep_uvs_list.append([0.0, (j / n_recep_rad) * 2.0 - 1.0])
+                    
+            # Faces for center ring
+            for j in range(n_recep_rad):
+                j_next = (j + 1) % n_recep_rad
+                recep_faces_list.append([0, 1 + j, 1 + j_next])
+                
+            # Faces for concentric rings
+            for ring in range(1, n_recep_rings):
+                r_start = 1 + (ring - 1) * n_recep_rad
+                r_next = 1 + ring * n_recep_rad
+                for j in range(n_recep_rad):
+                    j_n = (j + 1) % n_recep_rad
+                    p0 = r_start + j
+                    p1 = r_start + j_n
+                    p2 = r_next + j
+                    p3 = r_next + j_n
+                    recep_faces_list.append([p0, p1, p3])
+                    recep_faces_list.append([p0, p3, p2])
+                    
+            # Central succulent ovary column:
+            # 6-furrowed cylindrical ovary from receptacle base to style insertion
+            n_ovary_slices = 16
+            n_ovary_steps = 8
+            z_ov_min = -0.045 * self.scale
+            z_ov_max = 0.065 * self.scale
+            r_ov_base = 0.016 * self.scale
+            
+            ov_vert_start = len(recep_verts_list)
+            for i in range(n_ovary_steps):
+                u_ov = i / (n_ovary_steps - 1)
+                z_ov = z_ov_min + u_ov * (z_ov_max - z_ov_min)
+                r_ov = r_ov_base * (1.0 - 0.20 * (u_ov ** 2))
+                for j in range(n_ovary_slices):
+                    th = j * (2.0 * np.pi / n_ovary_slices)
+                    # Subtle 3-sulcate / 6-lobed carpel grooves
+                    r_carp = r_ov * (1.0 + 0.12 * np.cos(3.0 * th))
+                    recep_verts_list.append(np.array([r_carp * np.cos(th), r_carp * np.sin(th), z_ov]))
+                    recep_uvs_list.append([0.0, j / n_ovary_slices])
+                    
+            for i in range(n_ovary_steps - 1):
+                for j in range(n_ovary_slices):
+                    j_n = (j + 1) % n_ovary_slices
+                    p0 = ov_vert_start + i * n_ovary_slices + j
+                    p1 = ov_vert_start + i * n_ovary_slices + j_n
+                    p2 = ov_vert_start + (i + 1) * n_ovary_slices + j
+                    p3 = ov_vert_start + (i + 1) * n_ovary_slices + j_n
+                    recep_faces_list.append([p0, p1, p3])
+                    recep_faces_list.append([p0, p3, p2])
+                    
+            r_verts_local = np.array(recep_verts_list, dtype=np.float64)
+            r_verts_world = self.center + (self.rot_matrix @ r_verts_local.T).T
+            r_faces = np.array(recep_faces_list, dtype=np.int32)
+            r_normals = compute_mesh_normals(r_verts_world, r_faces)
+            r_uvs = np.array(recep_uvs_list, dtype=np.float64)
+            
+            all_verts.append(r_verts_world)
+            all_faces.append(r_faces + vert_offset)
+            all_normals.append(r_normals)
+            all_uvs.append(r_uvs)
+            all_mat_ids.append(np.full(len(r_verts_world), 5, dtype=np.int32))  # Celery lime nectary/ovary
+            vert_offset += len(r_verts_world)
+
         # 2. Generate Reproductive Organs (only if opening > 0.4 and not bud)
         if self.opening > 0.4 and not self.is_bud:
-            filament_len = 0.44 * self.scale * (self.opening ** 1.35)
-            anther_len = 0.175 * self.scale
-            anther_radius = 0.0210 * self.scale
-            
             for k in range(6):
-                ang = k * (np.pi / 3.0) + np.pi / 6.0 + self.rng.uniform(-0.10, 0.10)
+                # Inner whorl vs outer whorl differentiation
+                is_inner_stamen = (k % 2 == 0)
+                ang_offset = self.rng.uniform(-0.08, 0.08)
+                ang = k * (np.pi / 3.0) + np.pi / 6.0 + ang_offset
                 
-                # Filament tube mesh (cylinder with 8 radial slices, 10 height steps)
-                # True botanical trumpet stamen: slender filament arching gracefully from throat
-                u_steps = np.linspace(0.0, 1.0, 10)
+                # Proportions:
+                anther_len = (0.145 if is_inner_stamen else 0.138) * self.scale * self.rng.uniform(0.95, 1.05)
+                anther_radius = 0.0175 * self.scale
+                
+                # Attachment at receptacle base
+                r_base = 0.026 * self.scale
+                z_base = -0.040 * self.scale
+                
+                # Natural stamen length & radial flare
+                stamen_len_var = self.rng.uniform(0.95, 1.05) * (1.04 if is_inner_stamen else 0.98)
+                r_tip = (0.22 if is_inner_stamen else 0.19) * self.scale * (self.opening ** 1.30) * self.rng.uniform(0.95, 1.05)
+                z_tip = (0.43 if is_inner_stamen else 0.40) * (self.opening ** 1.25) * stamen_len_var * self.scale
+                sag_tip = -0.018 * self.scale
+                
+                # True botanical sigmoid bowing:
+                # Emerging from receptacle, bowing outward gracefully into bell, then gently curving inward toward the style
+                u_steps = np.linspace(0.0, 1.0, 14)
                 fil_verts = []
                 for u in u_steps:
-                    r_u = 0.20 * self.scale * (self.opening ** 1.35) * (np.sin(0.5 * np.pi * u) ** 1.15)
-                    z_u = (0.04 + 0.38 * (self.opening ** 1.25) * (u ** 0.88)) * self.scale
-                    sag = -0.010 * self.scale * (u ** 1.8)
+                    bow_outward = 0.046 * self.scale * (self.opening ** 1.2) * np.sin(np.pi * (u ** 0.88))
+                    r_u = r_base * (1.0 - u) + r_tip * u + bow_outward
+                    z_u = z_base * (1.0 - u) + z_tip * (u ** 0.92)
+                    sag = sag_tip * (u ** 1.8)
                     spine_local = np.array([r_u * np.cos(ang), r_u * np.sin(ang) + sag, z_u])
                     spine_world = self.center + self.rot_matrix @ spine_local
-                    radius = (0.0044 - 0.0014 * u) * self.scale
+                    radius = (0.0062 - 0.0026 * u) * self.scale
                     for phi_idx in range(8):
                         phi = phi_idx * (2.0 * np.pi / 8.0)
                         radial_vec = np.array([np.cos(phi), np.sin(phi), 0.0])
                         fil_verts.append(spine_world + self.rot_matrix @ (radial_vec * radius))
                         
                 fil_verts = np.array(fil_verts, dtype=np.float64)
-                r_tip = 0.20 * self.scale * (self.opening ** 1.35)
-                z_tip = (0.04 + 0.38 * (self.opening ** 1.25)) * self.scale
-                sag_tip = -0.010 * self.scale
                 fil_tip_local = np.array([r_tip * np.cos(ang), r_tip * np.sin(ang) + sag_tip, z_tip])
                 fil_tip_world = self.center + self.rot_matrix @ fil_tip_local
                 
                 fil_faces = []
-                for i in range(9):
+                for i in range(13):
                     for j in range(8):
                         j_next = (j + 1) % 8
                         p0 = i * 8 + j
@@ -461,14 +573,14 @@ class LilyFlower:
                 all_mat_ids.append(np.full(len(fil_verts), 3, dtype=np.int32))  # 3 = filament (pale celery green)
                 vert_offset += len(fil_verts)
                 
-                # Versatile Anther at filament tip: organic 3D poise poised perpendicular to filament
-                yaw = self.rng.uniform(-0.55, 0.55)
-                pitch = self.rng.uniform(-0.55, 0.55)
-                roll = self.rng.uniform(-0.35, 0.35)
+                # Versatile Anther at filament tip: organic 3D balance poised perpendicular to filament with varied tilt
+                yaw = self.rng.uniform(-0.65, 0.65)
+                pitch = self.rng.uniform(-0.80, 0.45)
+                roll = self.rng.uniform(-0.45, 0.45)
                 anther_dir = normalize(np.array([
                     -np.sin(ang) + yaw,
                     np.cos(ang) + pitch,
-                    0.25 * np.cos(ang) + roll
+                    0.20 * np.cos(ang) + roll
                 ]))
                 anther_ortho1 = normalize(np.cross(anther_dir, np.array([0.0, 0.0, 1.0])))
                 anther_ortho2 = normalize(np.cross(anther_dir, anther_ortho1))
@@ -488,7 +600,7 @@ class LilyFlower:
                         lon_frac = lon_idx / n_lon
                         lon = lon_idx * (2.0 * np.pi / n_lon)
                         # Dehisced 2-lobed thecae with deep sulcus furrow
-                        theca_mod = 1.0 + 0.42 * np.cos(2.0 * lon)
+                        theca_mod = 1.0 + 0.45 * np.cos(2.0 * lon)
                         rad_curr = anther_radius * theca_mod * np.cos(lat)
                         
                         x_e = (anther_len * 0.5) * np.sin(lat)
@@ -523,18 +635,24 @@ class LilyFlower:
                 all_mat_ids.append(np.full(len(anther_verts), 4, dtype=np.int32))  # 4 = anther (velvety cinnamon pollen)
                 vert_offset += len(anther_verts)
                 
-            # Central Pistil & 3-Lobed Stigma (Extends elegantly beyond stamens)
-            pistil_len = (0.06 + 0.44 * (self.opening ** 1.25)) * self.scale
-            stigma_world = self.center + self.rot_matrix @ np.array([0.008 * self.scale, 0.006 * self.scale, pistil_len])
-            pistil_base = self.center + self.rot_matrix @ np.array([0.0, 0.0, 0.05 * self.scale])
+            # Central Pistil & 3-Lobed Stigma (Extends elegantly 15-20% BEYOND stamens)
+            pistil_len = (0.08 + 0.52 * (self.opening ** 1.25)) * self.scale
+            style_arch_tip = 0.024 * self.scale
+            style_droop_tip = -0.016 * self.scale
+            stigma_world = self.center + self.rot_matrix @ np.array([style_arch_tip, style_droop_tip, pistil_len])
+            pistil_base = self.center + self.rot_matrix @ np.array([0.0, 0.0, 0.025 * self.scale])
             
-            # Style tube
+            # Style tube with natural botanical curvature
             pistil_verts = []
             pistil_uvs_list = []
-            n_style_steps = 12
+            n_style_steps = 14
             for u in np.linspace(0.0, 1.0, n_style_steps):
-                center_pt = (1.0 - u) * pistil_base + u * stigma_world
-                r_pis = (0.0065 - 0.0018 * u) * self.scale
+                arch_u = style_arch_tip * (u ** 1.4)
+                droop_u = style_droop_tip * (u ** 1.6)
+                z_pis = (0.025 * (1.0 - u) + pistil_len * u)
+                local_pt = np.array([arch_u, droop_u, z_pis])
+                center_pt = self.center + self.rot_matrix @ local_pt
+                r_pis = (0.0072 - 0.0020 * u) * self.scale
                 for phi_idx in range(8):
                     phi = phi_idx * (2.0 * np.pi / 8.0)
                     rad_v = np.array([np.cos(phi), np.sin(phi), 0.0])
@@ -554,8 +672,8 @@ class LilyFlower:
             
             # 3-Lobed Swollen Stigma Pad at style tip
             n_stigma_radial = 18
-            stigma_rad_base = 0.022 * self.scale
-            stigma_tip_center = stigma_world + self.rot_matrix @ np.array([0.0, 0.0, 0.008 * self.scale])
+            stigma_rad_base = 0.026 * self.scale
+            stigma_tip_center = stigma_world + self.rot_matrix @ np.array([0.0, 0.0, 0.010 * self.scale])
             
             # Center vertex of stigma
             stigma_center_idx = len(pistil_verts)
@@ -564,9 +682,9 @@ class LilyFlower:
             
             for j in range(n_stigma_radial):
                 theta = j * (2.0 * np.pi / n_stigma_radial)
-                # 3-lobed clover morphology
-                r_lobe = stigma_rad_base * (1.0 + 0.38 * np.cos(3.0 * theta))
-                lobe_disp = np.array([r_lobe * np.cos(theta), r_lobe * np.sin(theta), -0.003 * self.scale])
+                # Prominent 3-lobed glandular clover morphology
+                r_lobe = stigma_rad_base * (1.0 + 0.44 * np.cos(3.0 * theta))
+                lobe_disp = np.array([r_lobe * np.cos(theta), r_lobe * np.sin(theta), -0.004 * self.scale])
                 pistil_verts.append(stigma_world + self.rot_matrix @ lobe_disp)
                 pistil_uvs_list.append([1.0, j / n_stigma_radial])
                 
