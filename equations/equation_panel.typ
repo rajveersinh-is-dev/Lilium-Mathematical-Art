@@ -19,7 +19,7 @@
 
 #v(1.0pt)
 
-$ "rgb" lr(( F lr(( H_0 lr(( frac(m - 1200, 720), frac(721 - n, 720) )) )), thin F lr(( H_1 lr(( frac(m - 1200, 720), frac(721 - n, 720) )) )), thin F lr(( H_2 lr(( frac(m - 1200, 720), frac(721 - n, 720) )) )) )), quad "where" thin F(x) = lr(floor.l 255 lr(( frac(1.25 x (1 + 1.25 x / L_w^2), 1 + 1.25 x) ))^(1 / 2.2) + xi_"CMOS"(m, n) floor.r), "and" $
+$ "rgb" lr(( F lr(( H_0 lr(( frac(m - 1200, 720), frac(721 - n, 720) )) )), thin F lr(( H_1 lr(( frac(m - 1200, 720), frac(721 - n, 720) )) )), thin F lr(( H_2 lr(( frac(m - 1200, 720), frac(721 - n, 720) )) )) )), quad "where" thin F(x) = lr(floor.l 255 lr(( frac(1.25 x (1 + 1.25 x / L_w^2), 1 + 1.25 x) ))^(1 / 2.2) + xi_"CMOS" (m, n) floor.r), "and" $
 
 $ H_v (x, y) = sum_(k=1)^(8) lr(( product_(r=1)^(k-1) (1 - A_r (x, y)) )) lr([ U_k (x, y) L_(v, k) (x, y) + (1 - U_k (x, y)) B_v (x, y) ]), quad v in {0, 1, 2}, $
 
@@ -31,10 +31,10 @@ $ bold(p)_(k, j) (s) = lr(( r_k (s) cos(psi_(k, j) + delta_"whorl"), thin r_k (s
 
 $ w(s) = C_w s^(1.20) (1 - s)^(0.88) lr([ 1 + 0.35 sin(pi s) - 0.12 sin(2pi s) ]), quad c(s, t) = -delta_"groove" e^(-26 t^2) (1 - 0.45 s) + delta_"arch" s (1 - t^2) + A_"ruf" s^(1.4) t^2 sin(2pi omega s), $
 
-$ V(s, t) = 1 + sum_(i=1)^4 a_i exp lr( -frac((|t| - 0.19 i (1 - 0.12 s))^2, 2 sigma_i^2) ), quad Pi(s, t) = sum_(p=1)^(N_p) h_p exp lr( -k_p lr([ (s - s_p)^2 + (t - t_p)^2 ]) ), $
+$ V(s, t) = 1 + sum_(i=1)^4 a_i exp lr(( -frac((|t| - 0.19 i (1 - 0.12 s))^2, 2 sigma_i^2) )), quad Pi(s, t) = sum_(p=1)^(N_p) h_p exp lr(( -k_p lr([ (s - s_p)^2 + (t - t_p)^2 ]) )), $
 
 $ r_"theca" (theta) = R_0 (1 - 0.35 cos 2theta) e^(-32 t^2), quad r_"stigma" (theta) = R_s (1 + 0.42 cos 3theta), quad bold(p)_"leaf" (s) = bold(p)_"att" + s L bold(d) - frac(g, 2) s^2 bold(hat(z)) + w_"leaf" (s) t bold(B)_"twist" (s), $
 
-$ S_"key" (bold(x)) = frac(1, 16) sum_(i=1)^(16) bb(1) lr( z_L (bold(x)) - delta_"bias" <= Z_"SM" (bold(u)_L + r_"pcf" bold(xi)_i) ), quad A_"ssao" (bold(x)) = max lr( 0, 1 - frac(1, 16) sum_(i=1)^(16) bb(1)(z_s > z_"sample") frac(max(0, bold(n) dot bold(v)_i), 1 + d_i^2) ), $
+$ S_"key" (bold(x)) = frac(1, 16) sum_(i=1)^(16) bb(1) lr([ z_L (bold(x)) - delta_"bias" <= Z_"SM" (bold(u)_L + r_"pcf" bold(xi)_i) ]), quad A_"ssao" (bold(x)) = max lr(( 0, 1 - frac(1, 16) sum_(i=1)^(16) bb(1) lr([ z_s > z_"sample" ]) frac(max(0, bold(n) dot bold(v)_i), 1 + d_i^2) )), $
 
-$ C(z) = min lr( r_max, k_"CoC" frac(|z - 3.92|, z) ), quad bold(I)_"DoF" (bold(u)) = frac(1, sum_(i=1)^(28) w_i) sum_(i=1)^(28) w_i bold(I) lr(( bold(u) + C(z) bold(phi)_i )), quad bold(phi)_i = sqrt(frac(i + 0.5, 28)) mat(cos(2.40 i); sin(2.40 i)). $
+$ C(z) = min lr(( r_max, k_"CoC" frac(|z - 3.92|, z) )), quad bold(I)_"DoF" (bold(u)) = frac(1, sum_(i=1)^(28) w_i) sum_(i=1)^(28) w_i bold(I) lr(( bold(u) + C(z) bold(phi)_i )), quad bold(phi)_i = sqrt(frac(i + 0.5, 28)) mat(cos(2.40 i); sin(2.40 i)). $
