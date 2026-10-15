@@ -88,7 +88,7 @@ $ w(s) = C_w s^(1.20) (1 - s)^(0.88) lr([ 1 + 0.35 sin(pi s) - 0.12 sin(2pi s) ]
 
 $ V(s, t) = 1 + sum_(i=1)^4 a_i exp lr(( -frac((|t| - 0.19 i (1 - 0.12 s))^2, 2 sigma_i^2) )), quad Pi(s, t) = sum_(p=1)^(N_p) h_p exp lr(( -k_p lr([ (s - s_p)^2 + (t - t_p)^2 ]) )), $
 
-$ r_"theca" (theta) = R_0 (1 - 0.35 cos 2theta) e^(-32 t^2), quad r_"stigma" (theta) = R_s (1 + 0.42 cos 3theta), quad bold(p)_"leaf" (s) = bold(p)_"att" + s L bold(d) - frac(g, 2) s^2 bold(hat(z)) + w_"leaf" (s) t bold(B)_"twist" (s), $
+$ r_"theca" (theta) = R_0 (1 - 0.35 cos 2theta) e^(-32 t^2), quad bold(C)_"pollen" = [0.62, 0.30, 0.12]^T, quad r_"stigma" (theta) = R_s (1 + 0.42 cos 3theta), quad bold(p)_"leaf" (s) = bold(p)_"att" + s L bold(d) - frac(g, 2) s^2 bold(hat(z)) + w_"leaf" (s) t bold(B)_"twist" (s), $
 
 $ S_"key" (bold(x)) = frac(1, 16) sum_(i=1)^(16) bb(1) lr([ z_L (bold(x)) - delta_"bias" <= Z_"SM" (bold(u)_L + r_"pcf" bold(xi)_i) ]), quad A_"ssao" (bold(x)) = max lr(( 0, 1 - frac(1, 16) sum_(i=1)^(16) bb(1) lr([ z_s > z_"sample" ]) frac(max(0, bold(n) dot bold(v)_i), 1 + d_i^2) )), $
 
@@ -177,7 +177,7 @@ V(s, t) = 1 + \sum_{k=1}^4 a_k \exp\left(-\frac{(|t| - \tau_k(s))^2}{2\sigma_k^2
 \section{Androecium and Gynoecium}
 Versatile anthers are curved 2-lobed thecae with central dehiscence sulcus:
 \begin{equation}
-r_{\mathrm{theca}}(\theta) = R_0 (1 - 0.35 \cos 2\theta), \quad \mathbf{C}_{\mathrm{pollen}} = [0.94, 0.50, 0.04]^T.
+r_{\mathrm{theca}}(\theta) = R_0 (1 - 0.35 \cos 2\theta), \quad \mathbf{C}_{\mathrm{pollen}} = [0.62, 0.30, 0.12]^T.
 \end{equation}
 The style apex terminates in a 3-lobed moist glistening stigma:
 \begin{equation}
