@@ -20,17 +20,18 @@
 ## Master Artwork
 
 <div align="center">
-  <img src="outputs/lilium_mathematical_art.png" alt="White Lilies by Rajveersinh Vishal Pardeshi" width="850"/>
+  <img src="outputs/lilium_mathematical_art.png?v=3" alt="White Lilies by Rajveersinh Vishal Pardeshi" width="850"/>
   <p><strong>White Lilies by Rajveersinh Vishal Pardeshi</strong> — Master Composition (2400 × 2400 px)</p>
 </div>
 
 <br/>
 
 <div align="center">
-  <img src="outputs/lily_bouquet.png" alt="Botanical 3D Render" width="420"/>
-  &nbsp;&nbsp;
-  <img src="outputs/lily_equations.png" alt="Analytical Equation Panel" width="420"/>
-  <p><em>Left: Standalone 3D Botanical Bouquet (2400 × 1440 px) &nbsp;|&nbsp; Right: Analytical Typeset Equation Panel (2400 × 960 px)</em></p>
+
+| Standalone 3D Botanical Bouquet (2400 × 1440 px) | Analytical Typeset Equation Panel (2400 × 960 px) |
+| :---: | :---: |
+| <img src="outputs/lily_bouquet.png?v=3" alt="Botanical 3D Render" width="420"/> | <img src="outputs/lily_equations.png?v=3" alt="Analytical Equation Panel" width="420"/> |
+
 </div>
 
 ---
@@ -96,13 +97,13 @@ Every visual attribute in the artwork is evaluated directly from continuous anal
 For pixel column $m \in \{1, \dots, 2400\}$ and row $n \in \{1, \dots, 1440\}$:
 
 ```math
-\mathbf{rgb}\left(\mathcal{F}\left(\mathbf{H}_0\left(\frac{m-1200}{1200}, \frac{721-n}{720}\right)\right), \mathcal{F}\left(\mathbf{H}_1\left(\frac{m-1200}{1200}, \frac{721-n}{720}\right)\right), \mathcal{F}\left(\mathbf{H}_2\left(\frac{m-1200}{1200}, \frac{721-n}{720}\right)\right)\right)
+\mathbf{rgb}\left(F\left(H_0\left(\frac{m-1200}{720}, \frac{721-n}{720}\right)\right), F\left(H_1\left(\frac{m-1200}{720}, \frac{721-n}{720}\right)\right), F\left(H_2\left(\frac{m-1200}{720}, \frac{721-n}{720}\right)\right)\right)
 ```
 
-where the color-channel activation operator $\mathcal{F}(x)$ is bounded in $[0, 255]$:
+where the color-channel filmic sensor curve $F(x)$ incorporates ACES-Reinhard tone reproduction, sRGB gamma $\gamma = 2.2$, and CMOS sensor dither:
 
 ```math
-\mathcal{F}(x) = \left\lfloor 255 \cdot \min\left(1, \max\left(0, x\right)\right) \right\rfloor
+F(x) = \left\lfloor 255 \left( \frac{1.25 x \left(1 + \frac{1.25 x}{L_w^2}\right)}{1 + 1.25 x} \right)^{\frac{1}{2.2}} + \xi_{\mathrm{CMOS}}(m, n) \right\rfloor
 ```
 
 ### 2. Multi-Flower Scene Ray-Casting & Depth Composition
