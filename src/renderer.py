@@ -419,6 +419,7 @@ def shade_scene_numba(
             spec_k = 0.22
             trans_k = 0.25
             cavity_ao = 1.0
+            pink_tissue_w = 0.0
             
             if m_id == 1 or m_id == 2:  # Lily Tepals (Inner Petal or Outer Sepal)
                 # 1. Base luminous ivory / pristine botanical white with delicate crystalline warmth
@@ -441,22 +442,24 @@ def shade_scene_numba(
                     
                     if m_id == 1:
                         # Inner petals: fuller, more radiant rose-pink watercolor wash
-                        stripe_w = 0.80 * stripe_k * pink_long
-                        wash_w = 0.54 * wash_k * pink_long
+                        stripe_w = 0.82 * stripe_k * pink_long
+                        wash_w = 0.56 * wash_k * pink_long
                     else:
                         # Outer sepals: slightly subtler, elegant rose blush
-                        stripe_w = 0.60 * stripe_k * pink_long
-                        wash_w = 0.40 * wash_k * pink_long
+                        stripe_w = 0.62 * stripe_k * pink_long
+                        wash_w = 0.42 * wash_k * pink_long
+                    
+                    pink_tissue_w = max(wash_w, stripe_w)
                     
                     # Blend the soft delicate rose watercolor wash first:
                     r_alb = r_alb * (1.0 - wash_w) + 0.985 * wash_w
-                    g_alb = g_alb * (1.0 - wash_w) + 0.400 * wash_w
-                    b_alb = b_alb * (1.0 - wash_w) + 0.650 * wash_w
+                    g_alb = g_alb * (1.0 - wash_w) + 0.380 * wash_w
+                    b_alb = b_alb * (1.0 - wash_w) + 0.620 * wash_w
                     
                     # Blend the rich, vibrant rose-carmine median stripe on top:
                     r_alb = r_alb * (1.0 - stripe_w) + 0.965 * stripe_w
-                    g_alb = g_alb * (1.0 - stripe_w) + 0.090 * stripe_w
-                    b_alb = b_alb * (1.0 - stripe_w) + 0.360 * stripe_w
+                    g_alb = g_alb * (1.0 - stripe_w) + 0.080 * stripe_w
+                    b_alb = b_alb * (1.0 - stripe_w) + 0.320 * stripe_w
                 
                 # 3. Celadon / chartreuse throat star gradient strictly confined to floral core (s < 0.24)
                 throat_factor = np.exp(-18.0 * (s ** 1.9))
@@ -481,9 +484,9 @@ def shade_scene_numba(
                     
                 # 6. 3D Raised Botanical Papillae & Crimson Nectar Guide Freckles
                 # In real Oriental lilies, raised fleshy papillae cluster along the proximal third
-                # (s in [0.12, 0.42], |t| in [0.03, 0.25]) flanking the green nectary canal.
-                p_cell_s = s * 22.0
-                p_cell_t = t * 18.0
+                # (s in [0.12, 0.44], |t| in [0.03, 0.26]) flanking the green nectary canal.
+                p_cell_s = s * 24.0
+                p_cell_t = t * 20.0
                 i_s = int(p_cell_s)
                 i_t = int(p_cell_t)
                 f_s = p_cell_s - float(i_s) - 0.5
@@ -491,21 +494,23 @@ def shade_scene_numba(
                 cell_hash = np.sin(float(i_s) * 127.1 + float(i_t) * 311.7) * 43758.5453
                 cell_rnd = cell_hash - np.floor(cell_hash)
                 
-                if cell_rnd > 0.60 and 0.12 < s < 0.42 and 0.03 < abs_t < 0.25:
+                if cell_rnd > 0.50 and 0.12 < s < 0.44 and 0.03 < abs_t < 0.26:
                     dist2 = f_s * f_s + f_t * f_t
                     if dist2 < 0.18:
                         p_height = (0.18 - dist2) / 0.18
                         # Organic raised ruby papillae
-                        p_w = p_height * 0.75
-                        r_alb = r_alb * (1.0 - p_w) + 0.72 * p_w
+                        p_w = p_height * 0.85
+                        r_alb = r_alb * (1.0 - p_w) + 0.82 * p_w
                         g_alb = g_alb * (1.0 - p_w) + 0.06 * p_w
                         b_alb = b_alb * (1.0 - p_w) + 0.22 * p_w
-                        spec_k += 0.50 * p_w
-                        roughness = max(0.06, roughness - 0.22 * p_w)
+                        spec_k += 0.55 * p_w
+                        roughness = max(0.05, roughness - 0.22 * p_w)
+                        nx += f_s * 1.5 * p_height
+                        ny += f_t * 1.5 * p_height
                         
                 # 7. Glistening Fresh Water / Dew Droplets
                 is_droplet = False
-                if s > 0.35 and abs_t < 0.75:
+                if s > 0.32 and abs_t < 0.78:
                     d_cell_s = s * 14.0
                     d_cell_t = t * 12.0
                     d_is = int(d_cell_s)
@@ -513,16 +518,25 @@ def shade_scene_numba(
                     d_hash = np.sin(float(d_is) * 317.3 + float(d_it) * 583.1) * 28472.9
                     d_rnd = d_hash - np.floor(d_hash)
                     
-                    if d_rnd > 0.94:
+                    if d_rnd > 0.93:
                         df_s = d_cell_s - float(d_is) - 0.5
                         df_t = d_cell_t - float(d_it) - 0.5
                         drop_r2 = df_s * df_s + df_t * df_t
-                        if drop_r2 < 0.12:
-                            roughness = 0.04
-                            spec_k = 0.85
+                        if drop_r2 < 0.13:
+                            roughness = 0.025
+                            spec_k = 0.98
                             is_droplet = True
-                            nx += df_s * 1.6
-                            ny += df_t * 1.6
+                            nx += df_s * 1.8
+                            ny += df_t * 1.8
+                            # Physical meniscus contact shadow & caustic refraction
+                            if drop_r2 > 0.075:
+                                r_alb *= 0.62
+                                g_alb *= 0.62
+                                b_alb *= 0.62
+                            elif drop_r2 < 0.025:
+                                r_alb = min(1.0, r_alb * 1.25)
+                                g_alb = min(1.0, g_alb * 1.25)
+                                b_alb = min(1.0, b_alb * 1.25)
                             
                 # 8. Analytical Petal Satin Cuticle & Isotropic Micro-relief
                 if not is_droplet:
@@ -555,74 +569,74 @@ def shade_scene_numba(
                 p_level = 0.5 + 0.5 * p_relief
                 
                 # Authentic Casa Blanca Lily Pollen: velvety cinnamon-terracotta, warm sienna, and burnt umber
-                r_pol = 0.48 * (1.0 - p_level) + 0.58 * p_level
-                g_pol = 0.20 * (1.0 - p_level) + 0.26 * p_level
-                b_pol = 0.03 * (1.0 - p_level) + 0.05 * p_level
+                r_pol = 0.54 * (1.0 - p_level) + 0.65 * p_level
+                g_pol = 0.22 * (1.0 - p_level) + 0.30 * p_level
+                b_pol = 0.04 * (1.0 - p_level) + 0.06 * p_level
                 
-                r_alb = r_pol * (1.0 - 0.45 * sulcus) + 0.22 * (0.45 * sulcus)
-                g_alb = g_pol * (1.0 - 0.45 * sulcus) + 0.08 * (0.45 * sulcus)
-                b_alb = b_pol * (1.0 - 0.45 * sulcus) + 0.02 * (0.45 * sulcus)
+                r_alb = r_pol * (1.0 - 0.45 * sulcus) + 0.24 * (0.45 * sulcus)
+                g_alb = g_pol * (1.0 - 0.45 * sulcus) + 0.09 * (0.45 * sulcus)
+                b_alb = b_pol * (1.0 - 0.45 * sulcus) + 0.03 * (0.45 * sulcus)
                 
                 # Powdery pollen granular normal bump
-                nx += 0.22 * pn_x
-                ny += 0.22 * pn_y
-                nz += 0.22 * pn_z
+                nx += 0.26 * pn_x
+                ny += 0.26 * pn_y
+                nz += 0.26 * pn_z
                 n_len = max(1e-6, (nx*nx + ny*ny + nz*nz)**0.5)
                 nx /= n_len; ny /= n_len; nz /= n_len
                 
-                roughness = 0.88; spec_k = 0.06; trans_k = 0.04
+                roughness = 0.94; spec_k = 0.03; trans_k = 0.02
                 
             elif m_id == 5:  # Pistil / 3-Lobed Viscid Glandular Stigma
                 lobe_ang = np.arctan2(ny, nx)
                 lobe_tint = 0.5 + 0.5 * np.cos(3.0 * lobe_ang)
                 # Pale celery-green style with glistening wet celadon/plum stigma pad
-                r_alb = 0.50 + 0.08 * lobe_tint
-                g_alb = 0.78 - 0.04 * lobe_tint
-                b_alb = 0.44 - 0.03 * lobe_tint
-                roughness = 0.10; spec_k = 0.75; trans_k = 0.30
+                r_alb = 0.48 + 0.08 * lobe_tint
+                g_alb = 0.76 - 0.04 * lobe_tint
+                b_alb = 0.42 - 0.03 * lobe_tint
+                roughness = 0.05; spec_k = 0.92; trans_k = 0.28
                 
             elif m_id == 6:  # Succulent Botanical Stem
                 # Firm, fleshy succulent green stem with delicate longitudinal cuticle sheen
-                r_alb = 0.048; g_alb = 0.185; b_alb = 0.042
-                roughness = 0.24; spec_k = 0.38; trans_k = 0.18
+                r_alb = 0.038; g_alb = 0.170; b_alb = 0.036
+                roughness = 0.22; spec_k = 0.42; trans_k = 0.18
                 
             elif m_id == 7:  # Realistic Botanical Leaf
                 # 1. Base lamina: deep, luxurious botanical emerald / dark viridian green
-                r_alb = 0.042 + 0.012 * s
-                g_alb = 0.265 + 0.035 * s
-                b_alb = 0.052 + 0.010 * s
+                r_alb = 0.018 + 0.008 * s
+                g_alb = 0.145 + 0.025 * s
+                b_alb = 0.024 + 0.006 * s
                 
                 # 2. Central longitudinal midrib vein (prominent celadon / spring-green canal)
                 mid_l = np.exp(-22.0 * (t * t))
-                r_alb = r_alb * (1.0 - mid_l) + 0.140 * mid_l
-                g_alb = g_alb * (1.0 - mid_l) + 0.440 * mid_l
-                b_alb = b_alb * (1.0 - mid_l) + 0.110 * mid_l
+                r_alb = r_alb * (1.0 - mid_l) + 0.095 * mid_l
+                g_alb = g_alb * (1.0 - mid_l) + 0.320 * mid_l
+                b_alb = b_alb * (1.0 - mid_l) + 0.070 * mid_l
                 
                 # 3. Secondary Monocot Parallel Vascular Veins (4 smooth longitudinal bundles per half)
                 b1 = np.exp(-45.0 * ((abs_t - 0.22) ** 2))
                 b2 = np.exp(-45.0 * ((abs_t - 0.44) ** 2))
                 b3 = np.exp(-45.0 * ((abs_t - 0.66) ** 2))
                 b4 = np.exp(-45.0 * ((abs_t - 0.85) ** 2))
-                vein_bands = (b1 + b2 + b3 + b4) * 0.075
+                vein_bands = (b1 + b2 + b3 + b4) * 0.050
                 g_alb = min(1.0, g_alb + vein_bands)
-                r_alb = min(1.0, r_alb + 0.35 * vein_bands)
-                b_alb = min(1.0, b_alb + 0.18 * vein_bands)
+                r_alb = min(1.0, r_alb + 0.25 * vein_bands)
+                b_alb = min(1.0, b_alb + 0.12 * vein_bands)
                 
                 # 4. Translucent leaf margins & tip (forward chlorophyll scattering)
                 if abs_t > 0.72:
                     edge_w = (abs_t - 0.72) / 0.28
-                    g_alb = min(1.0, g_alb + 0.065 * edge_w)
+                    g_alb = min(1.0, g_alb + 0.070 * edge_w)
                     r_alb = min(1.0, r_alb + 0.025 * edge_w)
-                    trans_k = 0.32 + 0.30 * edge_w
+                    trans_k = 0.34 + 0.32 * edge_w
                 else:
-                    trans_k = 0.25 + 0.15 * (s ** 1.5)
+                    trans_k = 0.26 + 0.16 * (s ** 1.5)
                     
                 # 5. Basal petiole sheath gradient (succulent pale celery green near stem)
                 if s < 0.24:
                     base_w = np.exp(-14.0 * (s ** 2))
-                    r_alb = r_alb * (1.0 - 0.35 * base_w) + 0.110 * (0.35 * base_w)
-                    g_alb = g_alb * (1.0 - 0.35 * base_w) + 0.360 * (0.35 * base_w)
-                    b_alb = b_alb * (1.0 - 0.35 * base_w) + 0.090 * (0.35 * base_w)
+                    r_alb = r_alb * (1.0 - 0.35 * base_w) + 0.100 * (0.35 * base_w)
+                    g_alb = g_alb * (1.0 - 0.35 * base_w) + 0.340 * (0.35 * base_w)
+                    b_alb = b_alb * (1.0 - 0.35 * base_w) + 0.080 * (0.35 * base_w)
                     
                 # 6. Acuminated tip color modulation
                 if s > 0.85:
@@ -631,12 +645,12 @@ def shade_scene_numba(
                     trans_k = min(0.50, trans_k + 0.15 * tip_w)
                 
                 # 7. Waxy cuticle specular reflectance & normal micro-relief
-                roughness = 0.16 * (1.0 - mid_l) + 0.24 * mid_l
-                spec_k = 0.60
+                roughness = 0.13 * (1.0 - mid_l) + 0.20 * mid_l
+                spec_k = 0.68
                 
                 # 8. Glistening fresh morning dew / water droplets on leaves
                 is_leaf_drop = False
-                if 0.20 < s < 0.85 and abs_t < 0.78:
+                if 0.18 < s < 0.88 and abs_t < 0.80:
                     ld_cell_s = s * 16.0
                     ld_cell_t = t * 12.0
                     ld_is = int(ld_cell_s)
@@ -644,16 +658,24 @@ def shade_scene_numba(
                     ld_hash = np.sin(float(ld_is) * 419.3 + float(ld_it) * 631.1) * 31849.7
                     ld_rnd = ld_hash - np.floor(ld_hash)
                     
-                    if ld_rnd > 0.94:
+                    if ld_rnd > 0.93:
                         ldf_s = ld_cell_s - float(ld_is) - 0.5
                         ldf_t = ld_cell_t - float(ld_it) - 0.5
                         drop_r2 = ldf_s * ldf_s + ldf_t * ldf_t
                         if drop_r2 < 0.14:
-                            roughness = 0.03
-                            spec_k = 0.95
+                            roughness = 0.02
+                            spec_k = 0.98
                             is_leaf_drop = True
                             nx += ldf_s * 1.8
                             ny += ldf_t * 1.8
+                            if drop_r2 > 0.08:
+                                r_alb *= 0.50
+                                g_alb *= 0.50
+                                b_alb *= 0.50
+                            elif drop_r2 < 0.025:
+                                r_alb = min(1.0, r_alb * 1.30)
+                                g_alb = min(1.0, g_alb * 1.30)
+                                b_alb = min(1.0, b_alb * 1.30)
                             
                 # 9. Analytical 3D Normal Relief: band-limited midrib groove, vein rib slopes & waxy cell grain
                 if not is_leaf_drop:
@@ -816,10 +838,26 @@ def shade_scene_numba(
                 diffuse_shadow = 0.18 + 0.82 * shadow_factor  # Translucent leaf chlorophyll penetration
             else:
                 diffuse_shadow = shadow_factor
+                
+            # Chromatic subsurface transmission color (tissue-specific forward scattering)
+            if m_id == 1 or m_id == 2:
+                # White tissue glows warm ivory-gold, pink blush tissue glows radiant magenta-rose
+                sss_r = (1.0 - pink_tissue_w) * 1.00 + pink_tissue_w * 0.98
+                sss_g = (1.0 - pink_tissue_w) * 0.96 + pink_tissue_w * 0.28
+                sss_b = (1.0 - pink_tissue_w) * 0.85 + pink_tissue_w * 0.52
+            elif m_id == 7:
+                # Radiant chlorophyll emerald translucency
+                sss_r = 0.05
+                sss_g = 0.46
+                sss_b = 0.06
+            else:
+                sss_r = r_alb
+                sss_g = g_alb
+                sss_b = b_alb
             
-            c_r += l1_c0 * (r_alb * (d1 * diffuse_shadow + t1 * max(0.20, shadow_factor)) + bounce_r + s1 * shadow_factor)
-            c_g += l1_c1 * (g_alb * (d1 * diffuse_shadow + t1 * max(0.20, shadow_factor)) + bounce_g + s1 * shadow_factor)
-            c_b += l1_c2 * (b_alb * (d1 * diffuse_shadow + t1 * max(0.20, shadow_factor)) + bounce_b + s1 * shadow_factor)
+            c_r += l1_c0 * (r_alb * d1 * diffuse_shadow + sss_r * (t1 * max(0.20, shadow_factor)) + bounce_r + s1 * shadow_factor)
+            c_g += l1_c1 * (g_alb * d1 * diffuse_shadow + sss_g * (t1 * max(0.20, shadow_factor)) + bounce_g + s1 * shadow_factor)
+            c_b += l1_c2 * (b_alb * d1 * diffuse_shadow + sss_b * (t1 * max(0.20, shadow_factor)) + bounce_b + s1 * shadow_factor)
             
             # --- FILL LIGHT ---
             n_dot_l2 = nx * fill_dir[0] + ny * fill_dir[1] + nz * fill_dir[2]
@@ -831,9 +869,9 @@ def shade_scene_numba(
             n_dot_h2 = max(0.0, nx * h2_x + ny * h2_y + nz * h2_z)
             s2 = (n_dot_h2 ** spec_exp1) * spec_k if d2 > 0.0 else 0.0
             ao_fill = max(0.42, ao_total) if m_id == 7 else ao_total
-            c_r += l2_c0 * (r_alb * (d2 + t2) + s2) * ao_fill
-            c_g += l2_c1 * (g_alb * (d2 + t2) + s2) * ao_fill
-            c_b += l2_c2 * (b_alb * (d2 + t2) + s2) * ao_fill
+            c_r += l2_c0 * (r_alb * d2 + sss_r * t2 + s2) * ao_fill
+            c_g += l2_c1 * (g_alb * d2 + sss_g * t2 + s2) * ao_fill
+            c_b += l2_c2 * (b_alb * d2 + sss_b * t2 + s2) * ao_fill
             
             # --- RIM / BACK LIGHT ---
             n_dot_l3 = nx * rim_dir[0] + ny * rim_dir[1] + nz * rim_dir[2]
@@ -846,9 +884,16 @@ def shade_scene_numba(
             s3 = (n_dot_h3 ** spec_exp1) * spec_k if d3 > 0.0 else 0.0
             
             edge_glow = fresnel * trans_k * (0.65 if m_id == 7 else 0.40)
-            c_r += l3_c0 * (r_alb * (d3 + t3 + edge_glow) + s3)
-            c_g += l3_c1 * (g_alb * (d3 + t3 + edge_glow) + s3)
-            c_b += l3_c2 * (b_alb * (d3 + t3 + edge_glow) + s3)
+            c_r += l3_c0 * (r_alb * (d3 + edge_glow) + sss_r * t3 + s3)
+            c_g += l3_c1 * (g_alb * (d3 + edge_glow) + sss_g * t3 + s3)
+            c_b += l3_c2 * (b_alb * (d3 + edge_glow) + sss_b * t3 + s3)
+            
+            # Delicate crystalline velvet sheen across organic petal surfaces
+            if m_id == 1 or m_id == 2:
+                velvet_sheen = ((1.0 - min(1.0, max(0.0, n_dot_v))) ** 3.6) * 0.085
+                c_r += velvet_sheen * 0.98
+                c_g += velvet_sheen * 0.96
+                c_b += velvet_sheen * 0.92
             
             rendered_rgb[py, px, 0] = c_r
             rendered_rgb[py, px, 1] = c_g
@@ -913,10 +958,11 @@ def apply_optical_bloom_glints(
 ):
     """
     Simulates high-energy specular glints and optical lens blooming.
-    Activates only on extreme highlights (water droplets, wet stigma, glistening nectar).
+    Activates exclusively on extreme specular highlights (dew droplets, wet stigma pads, moist nectaries).
     """
     inv_sigma2 = 1.0 / (2.0 * bloom_sigma * bloom_sigma)
-    bloom_k = 0.035
+    bloom_k = 0.045
+    threshold = 2.05
     
     for py in numba.prange(height):
         for px in range(width):
@@ -936,8 +982,8 @@ def apply_optical_bloom_glints(
                             sg = hdr_rgb[iy, ix, 1]
                             sb = hdr_rgb[iy, ix, 2]
                             slum = 0.2126 * sr + 0.7152 * sg + 0.0722 * sb
-                            if slum > 1.65:
-                                excess = slum - 1.65
+                            if slum > threshold:
+                                excess = slum - threshold
                                 d2 = float(dx * dx + dy * dy)
                                 gw = np.exp(-d2 * inv_sigma2)
                                 acc_br += sr * gw * excess
@@ -946,9 +992,11 @@ def apply_optical_bloom_glints(
                                 acc_bw += gw
                                 
             if acc_bw > 1e-4:
-                out_rgb[py, px, 0] = c_r + bloom_k * acc_br
-                out_rgb[py, px, 1] = c_g + bloom_k * acc_bg
-                out_rgb[py, px, 2] = c_b + bloom_k * acc_bb
+                # Normalize accumulated highlight energy by kernel weight so halation is smooth and physically scaled
+                norm_w = 1.0 / (acc_bw + 2.0)
+                out_rgb[py, px, 0] = c_r + bloom_k * acc_br * norm_w
+                out_rgb[py, px, 1] = c_g + bloom_k * acc_bg * norm_w
+                out_rgb[py, px, 2] = c_b + bloom_k * acc_bb * norm_w
             else:
                 out_rgb[py, px, 0] = c_r
                 out_rgb[py, px, 1] = c_g
@@ -967,10 +1015,10 @@ def apply_depth_of_field_macro(
     out_hdr: np.ndarray
 ):
     """
-    Macro Thin-Lens Depth-of-Field (DoF) filter with 28-tap Fermat spiral sampling.
-    Renders creamy, soft bokeh for background foliage while keeping hero flower razor-sharp.
+    Macro Thin-Lens Depth-of-Field (DoF) filter with 32-tap Fermat spiral sampling.
+    Renders creamy, soft bokeh for background foliage and rear blossoms while keeping hero center flower razor-sharp.
     """
-    n_taps = 28
+    n_taps = 32
     offsets_x = np.empty(n_taps, dtype=np.float32)
     offsets_y = np.empty(n_taps, dtype=np.float32)
     golden_angle = 2.39996323
@@ -985,12 +1033,16 @@ def apply_depth_of_field_macro(
         for px in range(width):
             z_curr = z_buffer[py, px]
             if z_curr > 1e6:
-                coc_curr = max_radius * 0.65
-            else:
-                dz = z_curr - z_focus
-                coc_curr = min(max_radius, coc_scale * abs(dz) / z_curr)
+                # Analytical background is already smooth; no foreground bleeding
+                out_hdr[py, px, 0] = hdr_rgb[py, px, 0]
+                out_hdr[py, px, 1] = hdr_rgb[py, px, 1]
+                out_hdr[py, px, 2] = hdr_rgb[py, px, 2]
+                continue
                 
-            if coc_curr < 0.65:
+            dz = z_curr - z_focus
+            coc_curr = min(max_radius, coc_scale * abs(dz) / z_curr)
+            
+            if coc_curr < 0.50:
                 out_hdr[py, px, 0] = hdr_rgb[py, px, 0]
                 out_hdr[py, px, 1] = hdr_rgb[py, px, 1]
                 out_hdr[py, px, 2] = hdr_rgb[py, px, 2]
@@ -1006,20 +1058,28 @@ def apply_depth_of_field_macro(
                 
                 if 0 <= ix < width and 0 <= iy < height:
                     z_samp = z_buffer[iy, ix]
-                    coc_samp = max_radius * 0.65 if z_samp > 1e6 else min(max_radius, coc_scale * abs(z_samp - z_focus) / z_samp)
-                    
-                    dist = np.sqrt((sx - px)**2 + (sy - py)**2)
-                    effective_coc = max(coc_curr, coc_samp)
-                    
-                    if dist <= effective_coc + 0.5:
-                        w = 1.0 - max(0.0, (dist - effective_coc + 0.5))
-                        if z_samp > z_curr + 0.12:
-                            w *= max(0.05, 1.0 - (z_samp - z_curr) * 0.85)
-                        acc_r += hdr_rgb[iy, ix, 0] * w
-                        acc_g += hdr_rgb[iy, ix, 1] * w
-                        acc_b += hdr_rgb[iy, ix, 2] * w
-                        acc_w += w
-                        
+                    if z_samp > 1e6:
+                        dist = np.sqrt((sx - px)**2 + (sy - py)**2)
+                        if dist <= coc_curr + 0.5:
+                            w = (1.0 - max(0.0, (dist - coc_curr + 0.5))) * 0.40
+                            acc_r += hdr_rgb[iy, ix, 0] * w
+                            acc_g += hdr_rgb[iy, ix, 1] * w
+                            acc_b += hdr_rgb[iy, ix, 2] * w
+                            acc_w += w
+                    else:
+                        dz_samp = z_samp - z_focus
+                        coc_samp = min(max_radius, coc_scale * abs(dz_samp) / z_samp)
+                        dist = np.sqrt((sx - px)**2 + (sy - py)**2)
+                        effective_coc = max(coc_curr, coc_samp)
+                        if dist <= effective_coc + 0.5:
+                            w = 1.0 - max(0.0, (dist - effective_coc + 0.5))
+                            if z_samp > z_curr + 0.12:
+                                w *= max(0.05, 1.0 - (z_samp - z_curr) * 0.85)
+                            acc_r += hdr_rgb[iy, ix, 0] * w
+                            acc_g += hdr_rgb[iy, ix, 1] * w
+                            acc_b += hdr_rgb[iy, ix, 2] * w
+                            acc_w += w
+                            
             if acc_w > 1e-4:
                 out_hdr[py, px, 0] = acc_r / acc_w
                 out_hdr[py, px, 1] = acc_g / acc_w
@@ -1028,6 +1088,55 @@ def apply_depth_of_field_macro(
                 out_hdr[py, px, 0] = hdr_rgb[py, px, 0]
                 out_hdr[py, px, 1] = hdr_rgb[py, px, 1]
                 out_hdr[py, px, 2] = hdr_rgb[py, px, 2]
+
+
+@numba.njit(fastmath=True, parallel=True)
+def apply_lens_chromatic_aberration(
+    height: int,
+    width: int,
+    in_rgb: np.ndarray,
+    out_rgb: np.ndarray,
+    ca_strength: float = 0.0032
+):
+    """
+    Simulates optical lateral chromatic aberration (radial dispersion) of macro camera lenses.
+    Dispersion increases quadratically from optical center, shifting the red channel
+    slightly outward and the blue channel slightly inward, preserving tack-sharp focus
+    at optical center while giving authentic photographic glass realism near frame perimeters.
+    """
+    cx = float(width) * 0.5
+    cy = float(height) * 0.5
+    inv_max_r2 = 1.0 / (cx * cx + cy * cy)
+    
+    for py in numba.prange(height):
+        dy = float(py) - cy
+        for px in range(width):
+            dx = float(px) - cx
+            r2 = (dx * dx + dy * dy) * inv_max_r2
+            shift = ca_strength * r2
+            
+            # Red channel: sampled slightly radially outward
+            rx = px + dx * shift
+            ry = py + dy * shift
+            irx = int(round(rx))
+            iry = int(round(ry))
+            if 0 <= irx < width and 0 <= iry < height:
+                out_rgb[py, px, 0] = in_rgb[iry, irx, 0]
+            else:
+                out_rgb[py, px, 0] = in_rgb[py, px, 0]
+                
+            # Green channel: optical center reference (zero chromatic shift)
+            out_rgb[py, px, 1] = in_rgb[py, px, 1]
+            
+            # Blue channel: sampled slightly radially inward
+            bx = px - dx * shift
+            by = py - dy * shift
+            ibx = int(round(bx))
+            iby = int(round(by))
+            if 0 <= ibx < width and 0 <= iby < height:
+                out_rgb[py, px, 2] = in_rgb[iby, ibx, 2]
+            else:
+                out_rgb[py, px, 2] = in_rgb[py, px, 2]
 
 
 @numba.njit(fastmath=True, parallel=True)
@@ -1046,21 +1155,21 @@ def apply_photographic_sensor_curve(
     """
     for py in numba.prange(height):
         v = (float(py) + 0.5) / float(height)
-        dy = (v - 0.48) * 1.10
+        dy = (v - 0.46) * 1.15
         
         for px in range(width):
             u = (float(px) + 0.5) / float(width)
-            dx = (u - 0.50) * 1.40
+            dx = (u - 0.50) * 1.35
             
             r2 = dx * dx + dy * dy
-            vignette = max(0.88, 1.0 - 0.12 * (r2 ** 1.15))
-            exp_scale = 1.20 * vignette
+            vignette = max(0.85, 1.0 - 0.15 * (r2 ** 1.12))
+            exp_scale = 1.15 * vignette
             
             c_r = hdr_rgb[py, px, 0] * exp_scale
             c_g = hdr_rgb[py, px, 1] * exp_scale
             c_b = hdr_rgb[py, px, 2] * exp_scale
             
-            l_white = 2.05
+            l_white = 2.10
             tm_r = (c_r * (1.0 + c_r / (l_white * l_white))) / (1.0 + c_r)
             tm_g = (c_g * (1.0 + c_g / (l_white * l_white))) / (1.0 + c_g)
             tm_b = (c_b * (1.0 + c_b / (l_white * l_white))) / (1.0 + c_b)
@@ -1070,7 +1179,7 @@ def apply_photographic_sensor_curve(
             g_b = np.power(max(0.0, min(1.0, tm_b)), 1.0 / 2.2)
             
             h = np.sin(float(px) * 12.9898 + float(py) * 78.233) * 43758.5453
-            noise = (h - np.floor(h) - 0.5) * 0.012
+            noise = (h - np.floor(h) - 0.5) * 0.010
             
             out_srgb[py, px, 0] = np.uint8(max(0.0, min(255.0, (g_r + noise) * 255.0)))
             out_srgb[py, px, 1] = np.uint8(max(0.0, min(255.0, (g_g + noise) * 255.0)))
@@ -1279,22 +1388,26 @@ class LilyRenderer:
         aa_rgb = np.zeros_like(rendered_rgb)
         apply_fxaa_antialiasing(self.height, self.width, rendered_rgb, aa_rgb)
         
-        # 2. Subtle Lens Glint Bloom (specular threshold > 1.45)
+        # 2. Subtle Lens Glint Bloom (specular threshold > 1.55)
         bloomed_rgb = np.zeros_like(aa_rgb)
-        b_rad = max(4, int(round(9.0 * res_scale)))
+        b_rad = max(4, int(round(10.0 * res_scale)))
         b_step = max(1, int(round(2.0 * res_scale)))
         b_sigma = 4.0 * res_scale
         apply_optical_bloom_glints(self.height, self.width, aa_rgb, bloomed_rgb, b_rad, b_sigma, b_step)
         
-        # 3. Macro Depth of Field (Crisp botanical aperture f/16 focused on blossoms)
+        # 3. Macro Depth of Field (Crisp botanical aperture f/4-f/5.6 focused on center blossoms)
         dof_rgb = np.zeros_like(bloomed_rgb)
-        z_focus = 3.82
-        coc_scale = 2.8 * res_scale
-        max_radius = 1.4 * res_scale
+        z_focus = 3.95
+        coc_scale = 4.8 * res_scale
+        max_radius = 3.6 * res_scale
         apply_depth_of_field_macro(self.height, self.width, bloomed_rgb, z_buffer, z_focus, coc_scale, max_radius, dof_rgb)
         
-        # 4. Photographic Sensor Response (Vignetting, Filmic S-Curve, CMOS Micro-Grain)
+        # 4. Lateral Chromatic Aberration (Radial optical glass dispersion)
+        ca_rgb = np.zeros_like(dof_rgb)
+        apply_lens_chromatic_aberration(self.height, self.width, dof_rgb, ca_rgb, ca_strength=0.0032)
+        
+        # 5. Photographic Sensor Response (Vignetting, Filmic S-Curve, CMOS Micro-Grain)
         final_srgb = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-        apply_photographic_sensor_curve(self.height, self.width, dof_rgb, final_srgb)
+        apply_photographic_sensor_curve(self.height, self.width, ca_rgb, final_srgb)
         
         return final_srgb

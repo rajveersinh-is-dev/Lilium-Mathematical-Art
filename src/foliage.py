@@ -1006,7 +1006,7 @@ class BouquetScene:
             
         # 3. Generate Leaves
         for leaf in self.leaves:
-            l_verts, l_faces, l_normals, l_uvs = leaf.generate_mesh(n_s=56, n_t=22)
+            l_verts, l_faces, l_normals, l_uvs = leaf.generate_mesh(n_s=64, n_t=26)
             all_verts.append(l_verts)
             all_faces.append(l_faces + vert_offset)
             all_normals.append(l_normals)

@@ -103,15 +103,15 @@ def evaluate_background_field(u: np.ndarray, v: np.ndarray) -> np.ndarray:
     """
     # Radial distance from floral focal point (upper center of bouquet)
     dx = u - 0.50
-    dy = v - 0.40
-    r2 = dx * dx + dy * dy
+    dy = v - 0.38
+    r2 = dx * dx * 1.25 + dy * dy
     
     # Soft Gaussian light pool behind bouquet
-    light_pool = np.exp(-3.5 * r2)[:, :, None]
+    light_pool = np.exp(-3.2 * r2)[:, :, None]
     
-    # Colors: museum-quality velvety dark charcoal-slate with soft warm botanical luminance
-    center_color = np.array([0.016, 0.022, 0.018], dtype=np.float32).reshape(1, 1, 3)
-    edge_color = np.array([0.005, 0.007, 0.006], dtype=np.float32).reshape(1, 1, 3)
+    # Colors: museum-quality velvety dark charcoal-sage with soft warm botanical luminance
+    center_color = np.array([0.014, 0.018, 0.015], dtype=np.float32).reshape(1, 1, 3)
+    edge_color = np.array([0.003, 0.004, 0.0035], dtype=np.float32).reshape(1, 1, 3)
     
     # Soft vertical atmospheric gradation
     vert_falloff = (0.92 + 0.16 * (1.0 - v))[:, :, None]
