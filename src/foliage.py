@@ -286,54 +286,284 @@ def generate_calyx_receptacle(
     return verts, faces, normals, uvs
 
 
-def generate_raffia_tie(
-    center: np.ndarray = np.array([0.0, -0.62, -0.04]),
-    radius: float = 0.088,
-    height: float = 0.08
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Generates an artisan coiled natural raffia/twine tie binding the bouquet stems."""
-    n_coils = 5
-    n_theta = 36
-    n_profile = 8
-    cord_r = 0.007
+def get_bundle_boundary(theta: float, y: float) -> np.ndarray:
+    """
+    Evaluates the smooth elliptical boundary of the stem bundle
+    at height y and polar angle theta around the Y-axis.
+    """
+    dy = y - (-0.62)
+    c_x = -0.0055
+    c_z = -0.0866 - 0.080 * dy
+    # Snug fit: tight grip around stem cluster
+    r_x = 0.188 + 0.320 * dy
+    r_z = 0.082 + 0.090 * dy
     
-    verts = []
-    uvs = []
-    total_steps = n_coils * n_theta
+    cos_t = np.cos(theta)
+    sin_t = np.sin(theta)
+    denom = np.sqrt((r_z * cos_t) ** 2 + (r_x * sin_t) ** 2)
+    r = (r_x * r_z) / max(1e-5, denom)
+    
+    # Subtle organic waviness of natural stem contours
+    r_wave = r + 0.0020 * np.sin(4.0 * theta + 0.4) + 0.0012 * np.cos(6.0 * theta)
+    return np.array([c_x + r_wave * cos_t, y, c_z + r_wave * sin_t])
+
+
+def generate_raffia_tie() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Generates high-fidelity artisan florist binding threads:
+    1. Dark natural hemp under-wrap (recessed tightly beneath coils, no flare)
+    2. Dense multi-turn tactile horizontal thread coils (11 tight, touching wraps)
+    3. Criss-cross diagonal cinch strands (French spiral tie)
+    4. Front artisan knot, bow loops, and two prominent drooping thread tails
+    """
+    all_verts = []
+    all_faces = []
+    all_uvs = []
+    v_offset = 0
+
+    y_min, y_max = -0.655, -0.585
+
+    # Dense, tactile helical thread coils (13 tight, touching wraps directly around stem bundle)
+    n_coils = 13
+    steps_per_coil = 42
+    total_steps = n_coils * steps_per_coil
+    n_tube_prof = 14
+    cord_r = 0.0050
+    
+    coil_verts = []
+    coil_uvs = []
     for i in range(total_steps):
         t_frac = i / float(total_steps - 1)
         theta = t_frac * n_coils * 2.0 * np.pi
-        y = center[1] - 0.5 * height + t_frac * height
-        r = radius + 0.004 * np.sin(4.0 * theta)
-        c_x = center[0] + r * np.cos(theta)
-        c_z = center[2] + r * np.sin(theta)
+        y = y_min + 0.003 + t_frac * (y_max - y_min - 0.006)
         
-        t_vec = normalize(np.array([-np.sin(theta), height / (n_coils * 2.0 * np.pi * radius), np.cos(theta)]))
-        n_vec = np.array([np.cos(theta), 0.0, np.sin(theta)])
-        b_vec = normalize(np.cross(t_vec, n_vec))
+        pt_bound = get_bundle_boundary(theta, y)
+        n_dir = np.array([np.cos(theta), 0.0, np.sin(theta)])
+        center_pt = pt_bound + (cord_r * 0.95) * n_dir
         
-        for p in range(n_profile):
-            phi = p * (2.0 * np.pi / n_profile)
-            disp = cord_r * (np.cos(phi) * n_vec + np.sin(phi) * b_vec)
-            verts.append(np.array([c_x + disp[0], y + disp[1], c_z + disp[2]]))
-            uvs.append([t_frac, p / float(n_profile)])
+        dt = 0.002
+        t_next = min(1.0, t_frac + dt)
+        th_next = t_next * n_coils * 2.0 * np.pi
+        y_next = y_min + 0.003 + t_next * (y_max - y_min - 0.006)
+        pt_next = get_bundle_boundary(th_next, y_next) + (cord_r * 0.95) * np.array([np.cos(th_next), 0.0, np.sin(th_next)])
+        
+        tangent = normalize(pt_next - center_pt)
+        normal = normalize(np.array([np.cos(theta), 0.0, np.sin(theta)]))
+        binormal = normalize(np.cross(tangent, normal))
+        
+        for p in range(n_tube_prof):
+            phi = p * (2.0 * np.pi / n_tube_prof)
+            disp = cord_r * (np.cos(phi) * normal + np.sin(phi) * binormal)
+            coil_verts.append(center_pt + disp)
+            coil_uvs.append([t_frac * n_coils + 0.1, p / float(n_tube_prof)])
             
-    verts = np.array(verts, dtype=np.float64)
-    uvs = np.array(uvs, dtype=np.float64)
-    faces = []
+    coil_verts = np.array(coil_verts, dtype=np.float64)
+    coil_uvs = np.array(coil_uvs, dtype=np.float64)
+    coil_faces = []
     for i in range(total_steps - 1):
-        for p in range(n_profile):
-            p_next = (p + 1) % n_profile
-            p0 = i * n_profile + p
-            p1 = i * n_profile + p_next
-            p2 = (i + 1) * n_profile + p
-            p3 = (i + 1) * n_profile + p_next
-            faces.append([p0, p1, p2])
-            faces.append([p1, p3, p2])
+        for p in range(n_tube_prof):
+            p_next = (p + 1) % n_tube_prof
+            p0 = i * n_tube_prof + p
+            p1 = i * n_tube_prof + p_next
+            p2 = (i + 1) * n_tube_prof + p
+            p3 = (i + 1) * n_tube_prof + p_next
+            coil_faces.append([p0, p1, p2])
+            coil_faces.append([p1, p3, p2])
             
-    faces = np.array(faces, dtype=np.int32)
-    normals = compute_mesh_normals(verts, faces)
-    return verts, faces, normals, uvs
+    all_verts.append(coil_verts)
+    all_faces.append(np.array(coil_faces, dtype=np.int32) + v_offset)
+    all_uvs.append(coil_uvs)
+    v_offset += len(coil_verts)
+
+    # 3. Criss-Cross Diagonal Cinch Strands
+    diag_steps = 48
+    for sign in [1.0, -1.0]:
+        diag_verts = []
+        diag_uvs = []
+        for i in range(diag_steps):
+            u = i / float(diag_steps - 1)
+            y = y_min + 0.005 + u * (y_max - y_min - 0.010)
+            theta = 0.50 * np.pi + sign * (u - 0.5) * 1.30 * np.pi
+            pt_bound = get_bundle_boundary(theta, y)
+            n_dir = np.array([np.cos(theta), 0.0, np.sin(theta)])
+            center_pt = pt_bound + (cord_r * 1.55) * n_dir
+            
+            t_vec = normalize(np.array([-np.sin(theta) * sign, 0.35, np.cos(theta) * sign]))
+            n_vec = n_dir
+            b_vec = normalize(np.cross(t_vec, n_vec))
+            
+            for p in range(10):
+                phi = p * (2.0 * np.pi / 10)
+                disp = (cord_r * 0.90) * (np.cos(phi) * n_vec + np.sin(phi) * b_vec)
+                diag_verts.append(center_pt + disp)
+                diag_uvs.append([u * 3.5 + 0.1, p / 10.0])
+                
+        diag_verts = np.array(diag_verts, dtype=np.float64)
+        diag_uvs = np.array(diag_uvs, dtype=np.float64)
+        diag_faces = []
+        for i in range(diag_steps - 1):
+            for p in range(10):
+                p_next = (p + 1) % 10
+                p0 = i * 10 + p
+                p1 = i * 10 + p_next
+                p2 = (i + 1) * 10 + p
+                p3 = (i + 1) * 10 + p_next
+                diag_faces.append([p0, p1, p2])
+                diag_faces.append([p1, p3, p2])
+                
+        all_verts.append(diag_verts)
+        all_faces.append(np.array(diag_faces, dtype=np.int32) + v_offset)
+        all_uvs.append(diag_uvs)
+        v_offset += len(diag_verts)
+
+    # 4. Front Artisan Knot, Bow Loops and Dangling Cord Tails
+    knot_center = get_bundle_boundary(0.50 * np.pi, -0.620) + np.array([0.0, 0.0, cord_r * 1.9])
+    
+    # A. Central Knot Core
+    n_k_lat = 12
+    n_k_lon = 14
+    knot_verts = []
+    knot_uvs = []
+    for la in range(n_k_lat):
+        v_lat = la / float(n_k_lat - 1)
+        lat = -0.5 * np.pi + v_lat * np.pi
+        for lo in range(n_k_lon):
+            lon = lo * (2.0 * np.pi / n_k_lon)
+            k_disp = np.array([
+                0.014 * np.cos(lat) * np.cos(lon),
+                0.011 * np.sin(lat),
+                0.011 * np.cos(lat) * np.sin(lon)
+            ])
+            knot_verts.append(knot_center + k_disp)
+            knot_uvs.append([v_lat + 0.1, lo / float(n_k_lon)])
+            
+    knot_verts = np.array(knot_verts, dtype=np.float64)
+    knot_uvs = np.array(knot_uvs, dtype=np.float64)
+    knot_faces = []
+    for la in range(n_k_lat - 1):
+        for lo in range(n_k_lon):
+            lo_next = (lo + 1) % n_k_lon
+            p0 = la * n_k_lon + lo
+            p1 = la * n_k_lon + lo_next
+            p2 = (la + 1) * n_k_lon + lo
+            p3 = (la + 1) * n_k_lon + lo_next
+            knot_faces.append([p0, p1, p2])
+            knot_faces.append([p1, p3, p2])
+            
+    all_verts.append(knot_verts)
+    all_faces.append(np.array(knot_faces, dtype=np.int32) + v_offset)
+    all_uvs.append(knot_uvs)
+    v_offset += len(knot_verts)
+
+    # B. Two Elegant Bow Loops
+    for loop_sign in [-1.0, 1.0]:
+        n_l_steps = 28
+        n_l_prof = 10
+        l_verts = []
+        l_uvs = []
+        loop_r = 0.0038
+        
+        angles = np.linspace(0.0, 2.0 * np.pi, n_l_steps)
+        loop_pts = []
+        for a in angles:
+            lx = knot_center[0] + loop_sign * (0.026 * (np.sin(a) ** 2) * (1.0 + 0.35 * np.cos(a)))
+            ly = knot_center[1] + 0.018 * np.sin(a)
+            lz = knot_center[2] + 0.010 * (1.0 - np.cos(a))
+            loop_pts.append(np.array([lx, ly, lz]))
+        loop_pts = np.array(loop_pts)
+        
+        for i in range(n_l_steps):
+            pt = loop_pts[i]
+            i_next = (i + 1) % n_l_steps
+            t_vec = normalize(loop_pts[i_next] - pt)
+            n_vec = np.array([0.0, 0.0, 1.0])
+            b_vec = normalize(np.cross(t_vec, n_vec))
+            n_vec = normalize(np.cross(b_vec, t_vec))
+            
+            for p in range(n_l_prof):
+                phi = p * (2.0 * np.pi / n_l_prof)
+                disp = loop_r * (np.cos(phi) * n_vec + np.sin(phi) * b_vec)
+                l_verts.append(pt + disp)
+                l_uvs.append([i / float(n_l_steps) + 0.1, p / float(n_l_prof)])
+                
+        l_verts = np.array(l_verts, dtype=np.float64)
+        l_uvs = np.array(l_uvs, dtype=np.float64)
+        l_faces = []
+        for i in range(n_l_steps - 1):
+            for p in range(n_l_prof):
+                p_next = (p + 1) % n_l_prof
+                p0 = i * n_l_prof + p
+                p1 = i * n_l_prof + p_next
+                p2 = (i + 1) * n_l_prof + p
+                p3 = (i + 1) * n_l_prof + p_next
+                l_faces.append([p0, p1, p2])
+                l_faces.append([p1, p3, p2])
+                
+        all_verts.append(l_verts)
+        all_faces.append(np.array(l_faces, dtype=np.int32) + v_offset)
+        all_uvs.append(l_uvs)
+        v_offset += len(l_verts)
+
+    # C. Two Pronounced Drooping Thread Tails
+    tail_configs = [
+        {
+            "p0": knot_center + np.array([-0.006, -0.008, 0.003]),
+            "p1": knot_center + np.array([-0.026, -0.048, 0.012]),
+            "p2": knot_center + np.array([-0.040, -0.105, 0.010]),
+            "p3": knot_center + np.array([-0.028, -0.165, 0.003]),
+            "n_steps": 32, "n_prof": 10, "r": 0.0042
+        },
+        {
+            "p0": knot_center + np.array([0.006, -0.008, 0.003]),
+            "p1": knot_center + np.array([0.028, -0.042, 0.015]),
+            "p2": knot_center + np.array([0.044, -0.095, 0.014]),
+            "p3": knot_center + np.array([0.034, -0.145, 0.005]),
+            "n_steps": 28, "n_prof": 10, "r": 0.0039
+        }
+    ]
+
+    for tc in tail_configs:
+        curve = BezierCurve3D(tc["p0"], tc["p1"], tc["p2"], tc["p3"])
+        u_tail = np.linspace(0.0, 1.0, tc["n_steps"])
+        c_pts = curve.evaluate(u_tail)
+        T, N, B = curve.compute_frames(u_tail)
+        
+        t_verts = []
+        t_uvs = []
+        for i in range(tc["n_steps"]):
+            pt = c_pts[i]
+            r_t = tc["r"] * (1.0 - 0.20 * (u_tail[i] ** 2))
+            n_v = N[i]
+            b_v = B[i]
+            for p in range(tc["n_prof"]):
+                phi = p * (2.0 * np.pi / tc["n_prof"])
+                disp = r_t * (np.cos(phi) * n_v + np.sin(phi) * b_v)
+                t_verts.append(pt + disp)
+                t_uvs.append([u_tail[i] * 6.0 + 0.1, p / float(tc["n_prof"])])
+                
+        t_verts = np.array(t_verts, dtype=np.float64)
+        t_uvs = np.array(t_uvs, dtype=np.float64)
+        t_faces = []
+        for i in range(tc["n_steps"] - 1):
+            for p in range(tc["n_prof"]):
+                p_next = (p + 1) % tc["n_prof"]
+                p0 = i * tc["n_prof"] + p
+                p1 = i * tc["n_prof"] + p_next
+                p2 = (i + 1) * tc["n_prof"] + p
+                p3 = (i + 1) * tc["n_prof"] + p_next
+                t_faces.append([p0, p1, p2])
+                t_faces.append([p1, p3, p2])
+                
+        all_verts.append(t_verts)
+        all_faces.append(np.array(t_faces, dtype=np.int32) + v_offset)
+        all_uvs.append(t_uvs)
+        v_offset += len(t_verts)
+
+    final_verts = np.vstack(all_verts)
+    final_faces = np.vstack(all_faces)
+    final_uvs = np.vstack(all_uvs)
+    final_normals = compute_mesh_normals(final_verts, final_faces)
+    return final_verts, final_faces, final_normals, final_uvs
 
 
 class BouquetScene:
@@ -790,7 +1020,7 @@ class BouquetScene:
         all_faces.append(r_faces + vert_offset)
         all_normals.append(r_normals)
         all_uvs.append(r_uvs)
-        all_mat_ids.append(np.full(len(r_verts), 6, dtype=np.int32))  # 6 = organic cord/stem
+        all_mat_ids.append(np.full(len(r_verts), 9, dtype=np.int32))  # 9 = artisan binding threads
         vert_offset += len(r_verts)
             
         return {
