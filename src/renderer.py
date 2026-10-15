@@ -581,17 +581,10 @@ def shade_scene_numba(
                 b_alb = 0.44 - 0.03 * lobe_tint
                 roughness = 0.10; spec_k = 0.75; trans_k = 0.30
                 
-            elif m_id == 6:  # Stem & Artisan Raffia Tie
-                if -0.67 < wy < -0.57 and (wx*wx + wz*wz) < 0.04:
-                    # Natural artisan raffia/twine binding
-                    raffia_hash = np.sin(float(px) * 19.3 + float(py) * 47.1) * 23812.1
-                    r_noise = (raffia_hash - np.floor(raffia_hash)) * 0.06
-                    r_alb = 0.72 + r_noise; g_alb = 0.62 + r_noise * 0.8; b_alb = 0.44 + r_noise * 0.6
-                    roughness = 0.75; spec_k = 0.08; trans_k = 0.04
-                else:
-                    # Succulent emerald stem
-                    r_alb = 0.048; g_alb = 0.185; b_alb = 0.042
-                    roughness = 0.24; spec_k = 0.38; trans_k = 0.18
+            elif m_id == 6:  # Succulent Botanical Stem
+                # Firm, fleshy succulent green stem with delicate longitudinal cuticle sheen
+                r_alb = 0.048; g_alb = 0.185; b_alb = 0.042
+                roughness = 0.24; spec_k = 0.38; trans_k = 0.18
                 
             elif m_id == 7:  # Realistic Botanical Leaf
                 # 1. Base lamina: deep, luxurious botanical emerald / dark viridian green
@@ -691,6 +684,40 @@ def shade_scene_numba(
                     g_alb = min(1.0, g_alb + 0.04 * suture_w)
                     
                 roughness = 0.22; spec_k = 0.44; trans_k = 0.35
+                
+            elif m_id == 9:  # Artisan Hand-Tied Florist Twine / Binding Threads
+                # Raised golden-wheat natural twine / spun raffia cord
+                r_alb = 0.770
+                g_alb = 0.675
+                b_alb = 0.495
+                
+                # 2-ply twisted strand striations
+                cord_phase = u_val * 24.0 + v_val * 6.28
+                fiber_twist = np.sin(cord_phase)
+                fiber_grain = np.sin(u_val * 140.0) * 0.025
+                r_alb = min(1.0, max(0.0, r_alb + 0.045 * fiber_twist + fiber_grain))
+                g_alb = min(1.0, max(0.0, g_alb + 0.038 * fiber_twist + fiber_grain * 0.8))
+                b_alb = min(1.0, max(0.0, b_alb + 0.022 * fiber_twist + fiber_grain * 0.5))
+                
+                # Crevasse shading between cord rounds (contact shadow in valleys)
+                valley = abs(np.sin(v_val * 6.28))
+                valley_shade = 1.0 - 0.28 * valley
+                r_alb *= valley_shade
+                g_alb *= valley_shade
+                b_alb *= valley_shade
+                
+                # Spun-fiber 3D surface normal perturbation (twisted yarn micro-ridges)
+                twist_norm = 0.16 * np.cos(cord_phase)
+                nx += twist_norm
+                ny += twist_norm * 0.3
+                nz += twist_norm * 0.2
+                n_len = max(1e-6, (nx*nx + ny*ny + nz*nz)**0.5)
+                nx /= n_len; ny /= n_len; nz /= n_len
+                
+                # Fibrous microfacet BRDF: high diffuse roughness with subtle woven sheen
+                roughness = 0.65
+                spec_k = 0.18
+                trans_k = 0.06
                 
             # Depth and contact ambient occlusion
             depth_val = z_buffer[py, px]

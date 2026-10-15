@@ -176,6 +176,12 @@ def get_material_by_id(mat_id: int, uv: np.ndarray) -> Tuple[np.ndarray, float, 
     elif mat_id == 7:
         albedo, trans, rough = evaluate_leaf_surface_color(uv)
         return albedo, rough, 0.32, trans
+    elif mat_id == 8:
+        # Lily Bud (Jade/celadon base transitioning to creamy ivory tip)
+        return np.array([0.55, 0.78, 0.52], dtype=np.float32), 0.22, 0.44, 0.35
+    elif mat_id == 9:
+        # Artisan Florist Twine / Binding Threads (Natural spun linen/raffia fiber)
+        return np.array([0.76, 0.67, 0.50], dtype=np.float32), 0.68, 0.14, 0.06
     else:
         # Fallback default
         return np.array([0.9, 0.9, 0.9], dtype=np.float32), 0.4, 0.2, 0.2
