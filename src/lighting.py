@@ -33,17 +33,17 @@ class StudioLighting:
         # 2. Fill light: soft cool ambient fill from lower-right
         self.fill = DirectionalLight(
             direction=np.array([0.55, 0.28, 0.62]),
-            color=np.array([0.86, 0.92, 1.0]),
-            intensity=0.38
+            color=np.array([0.88, 0.94, 1.0]),
+            intensity=0.58
         )
-        # 3. Rim / Back light: edge backlight from behind-above for petal translucency
+        # 3. Rim / Back light: edge backlight from behind-above for petal and leaf translucency
         self.rim = DirectionalLight(
             direction=np.array([0.15, 0.75, -0.64]),
-            color=np.array([0.98, 0.98, 0.92]),
-            intensity=0.68
+            color=np.array([0.96, 0.98, 0.92]),
+            intensity=0.85
         )
         # Ambient color: refined chiaroscuro fill
-        self.ambient_radiance = np.array([0.055, 0.065, 0.055], dtype=np.float32)
+        self.ambient_radiance = np.array([0.075, 0.088, 0.075], dtype=np.float32)
 
     def shade_surface(
         self,

@@ -153,12 +153,13 @@ class LilyLeaf:
         W = w_profile[:, None] * T
         
         # Anatomical cross section:
-        # Longitudinal midrib vein groove and gentle transverse convexity
+        # Longitudinal midrib vein groove and sculpted transverse camber
         phi_wave = rng.uniform(0.0, 2.0 * np.pi)
-        midrib_groove = -0.007 * self.max_width * np.exp(-18.0 * (T ** 2))
-        transverse_camber = 0.022 * self.max_width * (1.0 - T ** 2)
-        margin_wave = self.wave * self.length * (S ** 1.2) * (T ** 2) * np.sin(6.0 * S + phi_wave)
-        c_elev = midrib_groove + transverse_camber + margin_wave
+        midrib_groove = -0.016 * self.max_width * np.exp(-16.0 * (T ** 2))
+        transverse_camber = 0.032 * self.max_width * (1.0 - T ** 2)
+        margin_wave = self.wave * self.length * (S ** 1.2) * (T ** 2) * np.sin(8.0 * S + phi_wave)
+        tip_taper = np.clip((1.0 - S) / 0.08, 0.0, 1.0) ** 0.75
+        c_elev = (midrib_groove + transverse_camber + margin_wave) * tip_taper
         
         vx = spine_pts[:, 0, None] + W * binormals[:, 0, None] + c_elev * normals[:, 0, None]
         vy = spine_pts[:, 1, None] + W * binormals[:, 1, None] + c_elev * normals[:, 1, None]
