@@ -72,27 +72,30 @@ def evaluate_petal_surface_color(
     vein_modulation = 1.0
     for k in range(1, 5):
         tau = 0.22 * k * (1.0 - 0.15 * s)
-        vein_modulation += 0.04 * np.exp(-((abs_t - tau) ** 2) / 0.002)
+        vein_modulation += 0.03 * np.exp(-((abs_t - tau) ** 2) / 0.005)
     
     # 5. Carmine Papillae (Nectar ridges / delicate pink-red specks near throat)
     # Characteristic of Lilium auratum / oriental hybrids: raised crimson-pink dots near s in [0.12, 0.38]
+    # Scaled down intensity for a more natural look (less artificial noise).
     papillae_mask = 0.0
     if 0.12 < s < 0.38 and abs_t < 0.48:
-        dot = np.sin(42.0 * s) * np.cos(34.0 * t)
-        if dot > 0.65:
-            papillae_mask = (dot - 0.65) / 0.35 * (0.38 - s) / 0.26 * (1.0 - abs_t / 0.48)
+        dot = np.sin(55.0 * s) * np.cos(45.0 * t)
+        if dot > 0.85:
+            papillae_mask = (dot - 0.85) / 0.15 * (0.38 - s) / 0.26 * (1.0 - abs_t / 0.48)
+            papillae_mask *= 0.4  # dampen the effect so it doesn't look like noisy render artifacts
             
-    carmine_dot = np.array([0.74, 0.18, 0.28], dtype=np.float32)
+    carmine_dot = np.array([0.70, 0.22, 0.32], dtype=np.float32)
     
     # Blend components
     color = ivory_white * (1.0 - throat_factor) + celadon_green * throat_factor
-    color = color * (1.0 - 0.45 * midrib_factor) + midrib_green * (0.45 * midrib_factor)
+    color = color * (1.0 - 0.35 * midrib_factor) + midrib_green * (0.35 * midrib_factor)
     color = color * (0.97 + 0.03 * vein_modulation)
     color = color * (1.0 - papillae_mask) + carmine_dot * papillae_mask
     
     # Translucency: petal edges (t -> ±1) and throat are thinner and transmit more light
-    translucency = 0.24 + 0.38 * (abs_t ** 2) + 0.32 * throat_factor
-    roughness = 0.35 - 0.08 * throat_factor
+    # Slightly higher translucency for softer realism.
+    translucency = 0.30 + 0.40 * (abs_t ** 2) + 0.28 * throat_factor
+    roughness = 0.42 - 0.10 * throat_factor  # Sligthly rougher overall so it's less plastic-like
     
     return np.clip(color, 0.0, 1.0), float(translucency), float(roughness)
 
@@ -107,10 +110,10 @@ def evaluate_leaf_surface_color(
     t = float(np.clip(uv[1], -1.0, 1.0))
     abs_t = abs(t)
     
-    # Deep botanical waxy forest green
-    deep_green = np.array([0.026, 0.118, 0.028], dtype=np.float32)
+    # Deep botanical waxy forest green (lightened to avoid artificial black-green)
+    deep_green = np.array([0.05, 0.16, 0.05], dtype=np.float32)
     # Lighter spring-green midrib vein running down the center
-    midrib_light = np.array([0.082, 0.235, 0.058], dtype=np.float32)
+    midrib_light = np.array([0.10, 0.26, 0.08], dtype=np.float32)
     midrib_factor = float(np.exp(-32.0 * (t ** 2)))
     
     # Secondary Monocot Parallel Veins
@@ -119,10 +122,10 @@ def evaluate_leaf_surface_color(
     v3 = np.exp(-180.0 * ((abs_t - 0.60) ** 2))
     v4 = np.exp(-180.0 * ((abs_t - 0.78) ** 2))
     v5 = np.exp(-180.0 * ((abs_t - 0.92) ** 2))
-    sec_veins = float((v1 + v2 + v3 + v4 + v5) * 0.016)
+    sec_veins = float((v1 + v2 + v3 + v4 + v5) * 0.006)  # Reduced intensity for realism
     
     # Parallel cellular striations
-    striation = float(0.006 * np.sin(160.0 * t) * (1.0 - 0.3 * s))
+    striation = float(0.003 * np.sin(160.0 * t) * (1.0 - 0.3 * s))
     
     color = deep_green * (1.0 - midrib_factor) + midrib_light * midrib_factor
     color[1] += sec_veins + striation
@@ -161,21 +164,23 @@ def get_material_by_id(mat_id: int, uv: np.ndarray) -> Tuple[np.ndarray, float, 
         return albedo, rough, 0.24, trans * 0.9
     elif mat_id == 3:
         # Filament: pale succulent lime-white
-        return np.array([0.82, 0.92, 0.74], dtype=np.float32), 0.35, 0.20, 0.30
+        return np.array([0.78, 0.88, 0.75], dtype=np.float32), 0.45, 0.15, 0.30
     elif mat_id == 4:
         # Anther: rich golden-orange pollen dust
         # Oriental lilies have striking ochre-amber-orange pollen
-        pollen_base = np.array([0.84, 0.45, 0.06], dtype=np.float32)
-        return pollen_base, 0.65, 0.08, 0.05
+        # Muted ochre/rust for realism, rather than bright neon orange
+        pollen_base = np.array([0.62, 0.30, 0.12], dtype=np.float32)
+        return pollen_base, 0.75, 0.05, 0.05
     elif mat_id == 5:
         # Pistil style & stigma: fresh lime-pistachio green
         return np.array([0.70, 0.84, 0.54], dtype=np.float32), 0.32, 0.22, 0.25
     elif mat_id == 6:
         # Stem: firm botanical green
-        return np.array([0.22, 0.44, 0.16], dtype=np.float32), 0.36, 0.18, 0.15
+        return np.array([0.18, 0.38, 0.15], dtype=np.float32), 0.45, 0.18, 0.25
     elif mat_id == 7:
         albedo, trans, rough = evaluate_leaf_surface_color(uv)
-        return albedo, rough, 0.32, trans
+        # Reduced artificial specular highlight, returning higher roughness
+        return albedo, rough, 0.15, trans
     elif mat_id == 8:
         # Lily Bud (Jade/celadon base transitioning to creamy ivory tip)
         return np.array([0.55, 0.78, 0.52], dtype=np.float32), 0.22, 0.44, 0.35
