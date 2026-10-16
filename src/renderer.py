@@ -274,7 +274,7 @@ def compute_ssao_numba(
                             occlusion += w * w
                             
             occ_factor = occlusion / float(n_samples)
-            ao = max(0.35, 1.0 - occ_factor * 1.25)
+            ao = max(0.10, 1.0 - occ_factor * 1.55)
             ssao_raw[py, px] = ao
 
 
@@ -423,9 +423,9 @@ def shade_scene_numba(
             
             if m_id == 1 or m_id == 2:  # Lily Tepals (Inner Petal or Outer Sepal)
                 # 1. Base luminous ivory / pristine botanical white with delicate crystalline warmth
-                r_alb = 0.988 - 0.008 * (1.0 - s)
-                g_alb = 0.984 - 0.006 * (1.0 - s)
-                b_alb = 0.966 - 0.012 * (1.0 - s)
+                r_alb = 0.985 - 0.010 * (1.0 - s)
+                g_alb = 0.972 - 0.010 * (1.0 - s)
+                b_alb = 0.942 - 0.022 * (1.0 - s)
                 
                 # 2. Authentic Botanical Watercolor Rose-Pink Blush along adaxial petal midrib
                 # In real Oriental lilies (e.g. Lilium 'Muscadet' / 'Mona Lisa'), a delicate, radiant
@@ -462,7 +462,7 @@ def shade_scene_numba(
                     b_alb = b_alb * (1.0 - stripe_w) + 0.320 * stripe_w
                 
                 # 3. Celadon / chartreuse throat star gradient strictly confined to floral core (s < 0.24)
-                throat_factor = np.exp(-18.0 * (s ** 1.9))
+                throat_factor = np.exp(-7.0 * (s ** 1.4))
                 r_alb = r_alb * (1.0 - throat_factor) + 0.38 * throat_factor
                 g_alb = g_alb * (1.0 - throat_factor) + 0.88 * throat_factor
                 b_alb = b_alb * (1.0 - throat_factor) + 0.28 * throat_factor
@@ -505,8 +505,8 @@ def shade_scene_numba(
                         b_alb = b_alb * (1.0 - p_w) + 0.22 * p_w
                         spec_k += 0.55 * p_w
                         roughness = max(0.05, roughness - 0.22 * p_w)
-                        nx += f_s * 1.5 * p_height
-                        ny += f_t * 1.5 * p_height
+                        nx += f_s * 0.35 * p_height
+                        ny += f_t * 0.35 * p_height
                         
                 # 7. Glistening Fresh Water / Dew Droplets
                 is_droplet = False
@@ -577,9 +577,9 @@ def shade_scene_numba(
                 p_level = 0.5 + 0.5 * p_relief
                 
                 # Authentic Casa Blanca Lily Pollen: velvety cinnamon-terracotta, warm sienna, and burnt umber
-                r_pol = 0.54 * (1.0 - p_level) + 0.65 * p_level
-                g_pol = 0.22 * (1.0 - p_level) + 0.30 * p_level
-                b_pol = 0.04 * (1.0 - p_level) + 0.06 * p_level
+                r_pol = 0.43 * (1.0 - p_level) + 0.50 * p_level
+                g_pol = 0.17 * (1.0 - p_level) + 0.20 * p_level
+                b_pol = 0.03 * (1.0 - p_level) + 0.04 * p_level
                 
                 r_alb = r_pol * (1.0 - 0.45 * sulcus) + 0.24 * (0.45 * sulcus)
                 g_alb = g_pol * (1.0 - 0.45 * sulcus) + 0.09 * (0.45 * sulcus)
@@ -653,8 +653,8 @@ def shade_scene_numba(
                     trans_k = min(0.50, trans_k + 0.15 * tip_w)
                 
                 # 7. Waxy cuticle specular reflectance & normal micro-relief
-                roughness = 0.13 * (1.0 - mid_l) + 0.20 * mid_l
-                spec_k = 0.68
+                roughness = 0.30 * (1.0 - mid_l) + 0.42 * mid_l
+                spec_k = 0.40
                 
                 # 8. Glistening fresh morning dew / water droplets on leaves
                 is_leaf_drop = False
@@ -774,7 +774,12 @@ def shade_scene_numba(
             
             n_dot_l1 = nx * key_dir[0] + ny * key_dir[1] + nz * key_dir[2]
             cos_t = max(0.0, n_dot_l1)
-            bias = 0.007 + 0.015 * (1.0 - cos_t)
+            if m_id == 1 or m_id == 2:
+                bias = 0.003 + 0.007 * (1.0 - cos_t)
+            elif m_id == 7:
+                bias = 0.005 + 0.010 * (1.0 - cos_t)
+            else:
+                bias = 0.004 + 0.008 * (1.0 - cos_t)
             
             shadow_factor = 0.0
             
@@ -850,9 +855,9 @@ def shade_scene_numba(
             # Luminous botanical shadow response:
             # Translucent petals and foliage maintain clear contact shadow depth with forward subsurface glow
             if m_id == 1 or m_id == 2:
-                diffuse_shadow = 0.05 + 0.95 * shadow_factor
+                diffuse_shadow = 0.015 + 0.985 * shadow_factor
             elif m_id == 7:
-                diffuse_shadow = 0.18 + 0.82 * shadow_factor  # Translucent leaf chlorophyll penetration
+                diffuse_shadow = 0.06 + 0.94 * shadow_factor
             else:
                 diffuse_shadow = shadow_factor
                 
@@ -905,6 +910,21 @@ def shade_scene_numba(
             c_g += l3_c1 * (g_alb * (d3 + edge_glow) + sss_g * t3 + s3)
             c_b += l3_c2 * (b_alb * (d3 + edge_glow) + sss_b * t3 + s3)
             
+            # Subsurface wraparound: warm glow visible at grazing illumination (not just backlit)
+            # This simulates light diffusing through the petal thickness
+            if m_id == 1 or m_id == 2:
+                wrap1 = max(0.0, (n_dot_l1 + 0.50) / 1.50) * trans_k * 0.30
+                wrap2 = max(0.0, (n_dot_l2 + 0.50) / 1.50) * trans_k * 0.20
+                wrap3 = max(0.0, (n_dot_l3 + 0.50) / 1.50) * trans_k * 0.18
+                c_r += (l1_c0 * sss_r * wrap1 + l2_c0 * sss_r * wrap2 + l3_c0 * sss_r * wrap3)
+                c_g += (l1_c1 * sss_g * wrap1 + l2_c1 * sss_g * wrap2 + l3_c1 * sss_g * wrap3)
+                c_b += (l1_c2 * sss_b * wrap1 + l2_c2 * sss_b * wrap2 + l3_c2 * sss_b * wrap3)
+            elif m_id == 7:
+                wrap1 = max(0.0, (n_dot_l1 + 0.40) / 1.40) * trans_k * 0.18
+                c_r += l1_c0 * 0.05 * wrap1
+                c_g += l1_c1 * 0.38 * wrap1   # chlorophyll green glow
+                c_b += l1_c2 * 0.06 * wrap1
+
             # Delicate crystalline velvet sheen across organic petal surfaces
             if m_id == 1 or m_id == 2:
                 velvet_sheen = ((1.0 - min(1.0, max(0.0, n_dot_v))) ** 3.6) * 0.085
@@ -1186,7 +1206,10 @@ def apply_photographic_sensor_curve(
             c_g = hdr_rgb[py, px, 1] * exp_scale
             c_b = hdr_rgb[py, px, 2] * exp_scale
             
-            l_white = 2.10
+            c_r *= 1.018   # slight warm push
+            c_b *= 0.972   # slight blue roll-off (warmer final print)
+            
+            l_white = 1.80
             tm_r = (c_r * (1.0 + c_r / (l_white * l_white))) / (1.0 + c_r)
             tm_g = (c_g * (1.0 + c_g / (l_white * l_white))) / (1.0 + c_g)
             tm_b = (c_b * (1.0 + c_b / (l_white * l_white))) / (1.0 + c_b)
@@ -1212,7 +1235,7 @@ class LilyRenderer:
         self,
         width: int = 2400,
         height: int = 1440,
-        fov_deg: float = 38.0,
+        fov_deg: float = 34.0,
         camera_pos: np.ndarray = None,
         camera_target: np.ndarray = None
     ):
@@ -1222,12 +1245,12 @@ class LilyRenderer:
         self.camera_pos = (
             np.asarray(camera_pos, dtype=np.float64).reshape(3)
             if camera_pos is not None
-            else np.array([0.0, 0.20, 4.35], dtype=np.float64)
+            else np.array([0.0, 0.55, 4.55], dtype=np.float64)
         )
         self.camera_target = (
             np.asarray(camera_target, dtype=np.float64).reshape(3)
             if camera_target is not None
-            else np.array([0.0, 0.12, 0.0], dtype=np.float64)
+            else np.array([0.0, 0.06, 0.15], dtype=np.float64)
         )
         self.lighting = StudioLighting()
 
@@ -1317,7 +1340,7 @@ class LilyRenderer:
         y_min, y_max = -2.7, 1.6
         s_bounds = np.array([x_min, x_max, y_min, y_max], dtype=np.float32)
         
-        W_s, H_s = 2048, 2048
+        W_s, H_s = 3072, 3072
         s_x = (x_L - x_min) / (x_max - x_min) * float(W_s)
         s_y = (y_L - y_min) / (y_max - y_min) * float(H_s)
         
@@ -1414,9 +1437,9 @@ class LilyRenderer:
         
         # 3. Macro Depth of Field (Crisp botanical aperture f/4-f/5.6 focused on center blossoms)
         dof_rgb = np.zeros_like(bloomed_rgb)
-        z_focus = 3.95
-        coc_scale = 4.8 * res_scale
-        max_radius = 3.6 * res_scale
+        z_focus = 4.15
+        coc_scale = 5.6 * res_scale
+        max_radius = 4.2 * res_scale
         apply_depth_of_field_macro(self.height, self.width, bloomed_rgb, z_buffer, z_focus, coc_scale, max_radius, dof_rgb)
         
         # 4. Lateral Chromatic Aberration (Radial optical glass dispersion)

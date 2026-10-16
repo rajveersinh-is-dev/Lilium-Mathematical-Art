@@ -518,8 +518,8 @@ class LilyFlower:
                 ang = k * (np.pi / 3.0) + np.pi / 6.0 + ang_offset
                 
                 # Proportions:
-                anther_len = (0.145 if is_inner_stamen else 0.138) * self.scale * self.rng.uniform(0.95, 1.05)
-                anther_radius = 0.0175 * self.scale
+                anther_len = (0.090 if is_inner_stamen else 0.085) * self.scale * self.rng.uniform(0.93, 1.07)
+                anther_radius = 0.010 * self.scale
                 
                 # Attachment at receptacle base
                 r_base = 0.026 * self.scale
@@ -573,16 +573,40 @@ class LilyFlower:
                 all_mat_ids.append(np.full(len(fil_verts), 3, dtype=np.int32))  # 3 = filament (pale celery green)
                 vert_offset += len(fil_verts)
                 
-                # Versatile Anther at filament tip: organic 3D balance poised perpendicular to filament with varied tilt
-                yaw = self.rng.uniform(-0.65, 0.65)
-                pitch = self.rng.uniform(-0.80, 0.45)
-                roll = self.rng.uniform(-0.45, 0.45)
-                anther_dir = normalize(np.array([
-                    -np.sin(ang) + yaw,
-                    np.cos(ang) + pitch,
-                    0.20 * np.cos(ang) + roll
-                ]))
-                anther_ortho1 = normalize(np.cross(anther_dir, np.array([0.0, 0.0, 1.0])))
+                # Filament direction (base -> tip in flower local frame)
+                fil_base_local = np.array([r_base * np.cos(ang), r_base * np.sin(ang), z_base])
+                fil_tip_local = np.array([r_tip * np.cos(ang), r_tip * np.sin(ang) + sag_tip, z_tip])
+                fil_dir = normalize(fil_tip_local - fil_base_local)
+
+                # Anther hangs perpendicular to filament, drooping with gravity
+                up_world = np.array([0.0, 1.0, 0.0])
+                up_local = self.rot_matrix.T @ up_world
+                gravity_local = -up_local
+
+                # Axis perpendicular to filament in the plane containing gravity
+                perp = gravity_local - np.dot(gravity_local, fil_dir) * fil_dir
+                perp_norm = np.linalg.norm(perp)
+                if perp_norm > 1e-5:
+                    perp = perp / perp_norm
+                else:
+                    perp = normalize(np.cross(fil_dir, np.array([0.0, 0.0, 1.0])))
+
+                # Radial outward component (anthers splay outward from flower center)
+                outward_local = normalize(np.array([np.cos(ang), np.sin(ang), 0.0]))
+                outward_perp = outward_local - np.dot(outward_local, fil_dir) * fil_dir
+
+                # Blend: 55% gravity droop + 35% outward splay
+                sag_k = 0.55 + self.rng.uniform(-0.06, 0.06)
+                out_k = 0.35 + self.rng.uniform(-0.04, 0.04)
+                anther_dir = normalize(sag_k * perp + out_k * normalize(outward_perp + 1e-8))
+
+                # Small random twist about anther_dir (+/-20 degrees) for natural variety
+                twist_ang = self.rng.uniform(-0.35, 0.35)
+                anther_ortho1 = normalize(np.cross(anther_dir, fil_dir))
+                cos_tw = np.cos(twist_ang)
+                sin_tw = np.sin(twist_ang)
+                anther_dir = normalize(cos_tw * anther_dir + sin_tw * anther_ortho1)
+                anther_ortho1 = normalize(np.cross(anther_dir, fil_dir))
                 anther_ortho2 = normalize(np.cross(anther_dir, anther_ortho1))
                 
                 n_lat = 18

@@ -9,27 +9,27 @@
   },
   "random_seed": 2026,
   "camera": {
-    "position": [0.0, 0.08, 4.15],
-    "target": [0.0, 0.08, 0.0],
-    "fov_degrees": 36.0
+    "position": [0.0, 0.55, 4.55],
+    "target": [0.0, 0.06, 0.15],
+    "fov_degrees": 34.0
   },
   "lighting": {
     "key_light": {
-      "direction": [-0.42, 0.65, 0.63],
-      "color": [1.0, 0.99, 0.96],
-      "intensity": 1.25
+      "direction": [-0.52, 0.72, 0.46],
+      "color": [1.00, 0.975, 0.940],
+      "intensity": 1.60
     },
     "fill_light": {
-      "direction": [0.55, 0.28, 0.62],
-      "color": [0.88, 0.94, 1.0],
-      "intensity": 0.58
+      "direction": [0.60, 0.22, 0.76],
+      "color": [0.86, 0.91, 1.00],
+      "intensity": 0.32
     },
     "rim_light": {
-      "direction": [0.15, 0.75, -0.64],
-      "color": [0.96, 0.98, 0.92],
-      "intensity": 0.85
+      "direction": [0.10, 0.80, -0.58],
+      "color": [0.94, 0.96, 0.90],
+      "intensity": 0.55
     },
-    "ambient_radiance": [0.080, 0.092, 0.080]
+    "ambient_radiance": [0.048, 0.056, 0.048]
   },
   "perianth_model": {
     "tepals_per_flower": 6,
