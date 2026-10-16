@@ -20,7 +20,7 @@
 ## Master Artwork
 
 <div align="center">
-  <img src="outputs/lilium_mathematical_art.png?v=8" alt="White Lilies by Rajveersinh Vishal Pardeshi" width="850"/>
+  <img src="outputs/lilium_mathematical_art.png?v=6" alt="White Lilies by Rajveersinh Vishal Pardeshi" width="850"/>
   <p><strong>White Lilies by Rajveersinh Vishal Pardeshi</strong> — Master Composition (2400 × 2400 px)</p>
 </div>
 
@@ -30,7 +30,7 @@
 
 | Standalone 3D Botanical Bouquet (2400 × 1440 px) | Analytical Typeset Equation Panel (2400 × 960 px) |
 | :---: | :---: |
-| <img src="outputs/lily_bouquet.png?v=8" alt="Botanical 3D Render" width="420"/> | <img src="outputs/lily_equations.png?v=8" alt="Analytical Equation Panel" width="420"/> |
+| <img src="outputs/lily_bouquet.png?v=6" alt="Botanical 3D Render" width="420"/> | <img src="outputs/lily_equations.png?v=6" alt="Analytical Equation Panel" width="420"/> |
 
 </div>
 
@@ -66,7 +66,7 @@ The composition is structured into two seamlessly integrated vertical regions:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Upper Botanical Domain (60% — 2400 × 1440 px)**: A photorealistic, analytical 3D synthesis of a florist-grade bouquet of 8 botanical elements (6 open/nodding blooming lilies and 2 developing jade-and-ivory buds, _Lilium candidum / Oriental hybrid 'Casa Blanca'_) with curving Bézier stems and arching lanceolate leaves. Lighting features physically based path tracing with Random Walk subsurface scattering, dual-lobe microfacet specular highlights, Voronoi epidermal papillae, continuous perianth tube attachment, versatile anther thecae coated in velvety chocolate-cinnamon pollen, and 105mm macro photographic optics.
+1. **Upper Botanical Domain (60% — 2400 × 1440 px)**: A photorealistic, analytical 3D synthesis of a bouquet of 9 botanical elements (blooming white lilies and developing jade-and-ivory buds, _Lilium candidum / Oriental hybrid 'Casa Blanca'_) with curving Bézier stems and arching lanceolate leaves. Lighting features physically based path tracing with Random Walk subsurface scattering, dual-lobe microfacet specular highlights, Voronoi epidermal papillae, deep crimson nectar markings, versatile anther thecae coated in golden pollen, and 105mm macro photographic optics.
 2. **Mathematical Panel (40% — 2400 × 960 px)**: A pure white mathematical panel starting directly beneath the bouquet with no visual border. It presents:
    - Centered title: **White Lilies by Rajveersinh Vishal Pardeshi**
    - Exact explanatory sentence:
@@ -108,10 +108,10 @@ F(x) = \left\lfloor 255 \left( \frac{1.25 x \left(1 + \frac{1.25 x}{L_w^2}\right
 
 ### 2. Multi-Flower Scene Ray-Casting & Depth Composition
 
-The complete bouquet $\mathbf{H}_v(x, y)$ evaluates the optical contribution across $N=8$ botanical elements (6 open/nodding blossoms and 2 developing buds) with depth-ordered occlusion:
+The complete bouquet $\mathbf{H}_v(x, y)$ evaluates the optical contribution across $N=9$ botanical elements (7 open/nodding blossoms and 2 developing buds) with depth-ordered occlusion:
 
 ```math
-\mathbf{H}_v(x, y) = \sum_{j=1}^{8} \left( \prod_{r=1}^{j-1} \left[ 1 - \mathcal{A}_{1000, r}(x, y) \right] \right) \left( 1 - e^{-1000\left(r - \frac{1}{2}\right)} \mathcal{U}_r(x, y) \right) \mathbf{L}_{v, j}(x, y) + \mathbf{B}_v(x, y)
+\mathbf{H}_v(x, y) = \sum_{j=1}^{9} \left( \prod_{r=1}^{j-1} \left[ 1 - \mathcal{A}_{1000, r}(x, y) \right] \right) \left( 1 - e^{-1000\left(r - \frac{1}{2}\right)} \mathcal{U}_r(x, y) \right) \mathbf{L}_{v, j}(x, y) + \mathbf{B}_v(x, y)
 ```
 
 where $\mathcal{A}_{\kappa, j}(x, y) = \frac{1}{1 + e^{-\kappa(z_{\mathrm{cam}} - z_j(x, y))}}$ is the soft Z-buffer visibility operator and $\mathbf{B}_v(x, y)$ represents the chiaroscuro forest background gradient.
@@ -178,13 +178,13 @@ V(s, t) = 1 + \sum_{i=1}^4 a_i \exp\left(-\frac{(|t| - \tau_i(s))^2}{2\sigma_i^2
 
 ### 8. Androecium Prolate Ellipsoids & Gynoecium Pistil
 
-Each flower contains 6 versatile anthers modeled as prolate ellipsoids with 2-lobed thecae and dehiscence sulcus in $\mathbb{R}^3$:
+Each flower contains 6 versatile anthers modeled as prolate ellipsoids in $\mathbb{R}^3$:
 
 ```math
 \mathcal{E}_k = \left\{ \mathbf{x} \in \mathbb{R}^3 : \frac{\left((\mathbf{x} - \mathbf{q}_k)\cdot\mathbf{e}_{1,k}\right)^2}{a^2} + \frac{\left((\mathbf{x} - \mathbf{q}_k)\cdot\mathbf{e}_{2,k}\right)^2}{b^2} + \frac{\left((\mathbf{x} - \mathbf{q}_k)\cdot\mathbf{e}_{3,k}\right)^2}{c^2} \le 1 \right\}
 ```
 
-Each anther is coated in micro-textured pollen grains with velvety chocolate-cinnamon / amber-russet reflectance $\mathbf{C}_{\mathrm{pollen}} = [0.42, 0.22, 0.07]^T$, surrounding a central tri-lobed papillate stigmatic gynoecium head.
+Each anther is coated in micro-textured pollen grains with radiant golden-amber reflectance $\mathbf{C}_{\mathrm{pollen}} = [0.88, 0.48, 0.06]^T$, surrounding a central tri-lobed stigmatic gynoecium head.
 
 ### 9. Foliage & C² Bézier Stem Curves with Bishop Frames
 
