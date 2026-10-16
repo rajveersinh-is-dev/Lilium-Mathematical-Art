@@ -37,4 +37,4 @@ $ r_"theca" (theta) = R_0 (1 - 0.35 cos 2theta) e^(-32 t^2), quad r_"stigma" (th
 
 $ S_"key" (bold(x)) = frac(1, 16) sum_(i=1)^(16) bb(1) lr([ z_L (bold(x)) - delta_"bias" <= Z_"SM" (bold(u)_L + r_"pcf" bold(xi)_i) ]), quad A_"ssao" (bold(x)) = max lr(( 0, 1 - frac(1, 16) sum_(i=1)^(16) bb(1) lr([ z_s > z_"sample" ]) frac(max(0, bold(n) dot bold(v)_i), 1 + d_i^2) )), $
 
-$ C(z) = min lr(( r_max, k_"CoC" frac(|z - 3.95|, z) )), quad bold(I)_"DoF" (bold(u)) = frac(1, sum_(i=1)^(32) w_i) sum_(i=1)^(32) w_i bold(I) lr(( bold(u) + C(z) bold(phi)_i )), quad bold(phi)_i = sqrt(frac(i + 0.5, 32)) mat(cos(2.40 i); sin(2.40 i)), quad delta_"CA" = kappa_"disp" r^2. $
+$ C(z) = min lr(( r_max, k_"CoC" frac(|z - 4.15|, z) )), quad bold(I)_"DoF" (bold(u)) = frac(1, sum_(i=1)^(32) w_i) sum_(i=1)^(32) w_i bold(I) lr(( bold(u) + C(z) bold(phi)_i )), quad bold(phi)_i = sqrt(frac(i + 0.5, 32)) mat(cos(2.40 i); sin(2.40 i)), quad delta_"CA" = kappa_"disp" r^2. $

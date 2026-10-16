@@ -71,7 +71,7 @@ def create_petal_material():
     links.new(sep_uv.outputs['Y'], math_abs_t.inputs[0])
     
     # 1. Base Ivory White
-    col_ivory = srgb_to_linear_rgba((0.985, 0.980, 0.965))
+    col_ivory = srgb_to_linear_rgba((0.985, 0.972, 0.942))
     base_color_node = nodes.new('ShaderNodeRGB')
     base_color_node.outputs['Color'].default_value = col_ivory
     
@@ -352,7 +352,7 @@ def create_anther_material():
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links
     bsdf = nodes.get("Principled BSDF")
-    bsdf.inputs['Base Color'].default_value = srgb_to_linear_rgba((0.68, 0.22, 0.02))
+    bsdf.inputs['Base Color'].default_value = srgb_to_linear_rgba((0.46, 0.18, 0.035))
     bsdf.inputs['Diffuse Roughness'].default_value = 0.88
     bsdf.inputs['Roughness'].default_value = 0.74
     
@@ -427,12 +427,12 @@ def create_leaf_material():
     
     out_node = nodes.new('ShaderNodeOutputMaterial')
     bsdf = nodes.new('ShaderNodeBsdfPrincipled')
-    bsdf.inputs['Roughness'].default_value = 0.20
+    bsdf.inputs['Roughness'].default_value = 0.35
     bsdf.inputs['Subsurface Weight'].default_value = 0.62
     bsdf.inputs['Subsurface Radius'].default_value = (0.05, 0.18, 0.025)
     bsdf.inputs['Subsurface Scale'].default_value = 0.05
-    bsdf.inputs['Coat Weight'].default_value = 0.35
-    bsdf.inputs['Coat Roughness'].default_value = 0.12
+    bsdf.inputs['Coat Weight'].default_value = 0.20
+    bsdf.inputs['Coat Roughness'].default_value = 0.25
     
     uv_node = nodes.new('ShaderNodeUVMap')
     uv_node.uv_map = "UVMap"
@@ -579,7 +579,7 @@ def render_bouquet_cycles(
     world.use_nodes = True
     bg_node = world.node_tree.nodes.get("Background")
     if bg_node:
-        bg_node.inputs['Color'].default_value = srgb_to_linear_rgba((0.045, 0.065, 0.050))
+        bg_node.inputs['Color'].default_value = srgb_to_linear_rgba((0.040, 0.048, 0.040))
         bg_node.inputs['Strength'].default_value = 0.40
         
     print("[1/4] Synthesizing Parametric Bouquet Geometry from First Principles...")
@@ -628,21 +628,6 @@ def render_bouquet_cycles(
     # Studio Backdrop
     create_backdrop(scene)
     
-    # Camera: 105mm Macro Botanical Setup
-    print("[2/4] Setting Photographic Camera (105mm Macro, F/14 DOF, AgX)...")
-    cam_data = bpy.data.cameras.new("Camera")
-    cam_data.lens_unit = 'FOV'
-    cam_data.angle = np.radians(36.0)
-    cam_data.dof.use_dof = True
-    cam_data.dof.focus_distance = 4.22
-    cam_data.dof.aperture_fstop = 14.0
-    
-    cam_obj = bpy.data.objects.new("Camera", cam_data)
-    cam_obj.location = (0.0, 0.08, 4.65)
-    cam_obj.rotation_euler = (0.0, 0.0, 0.0)
-    scene.collection.objects.link(cam_obj)
-    scene.camera = cam_obj
-    
     def track_to_point(light_obj, target_pos):
         loc = Vector(light_obj.location)
         tgt = Vector(target_pos)
@@ -650,7 +635,22 @@ def render_bouquet_cycles(
         quat = dir_vec.to_track_quat('-Z', 'Y')
         light_obj.rotation_euler = quat.to_euler()
         
-    target_center = (0.0, 0.08, 0.0)
+    target_center = (0.0, 0.06, 0.15)
+
+    # Camera: 105mm Macro Botanical Setup
+    print("[2/4] Setting Photographic Camera (105mm Macro, F/5.6 DOF, AgX)...")
+    cam_data = bpy.data.cameras.new("Camera")
+    cam_data.lens_unit = 'FOV'
+    cam_data.angle = np.radians(34.0)
+    cam_data.dof.use_dof = True
+    cam_data.dof.focus_distance = 4.15
+    cam_data.dof.aperture_fstop = 5.6
+    
+    cam_obj = bpy.data.objects.new("Camera", cam_data)
+    cam_obj.location = (0.0, 0.55, 4.55)
+    track_to_point(cam_obj, target_center)
+    scene.collection.objects.link(cam_obj)
+    scene.camera = cam_obj
     
     # Photographic Studio Lighting Setup
     print("[3/4] Configuring 3-Point Chiaroscuro Softbox Lighting...")
@@ -658,7 +658,7 @@ def render_bouquet_cycles(
     key_data = bpy.data.lights.new(name="KeySoftbox", type='AREA')
     key_data.energy = 460.0
     key_data.size = 1.8
-    key_data.color = srgb_to_linear_rgb((1.0, 0.985, 0.95))
+    key_data.color = srgb_to_linear_rgb((1.00, 0.975, 0.940))
     key_obj = bpy.data.objects.new("KeySoftbox", key_data)
     key_obj.location = (-3.0, 2.2, 3.0)
     track_to_point(key_obj, target_center)
@@ -668,7 +668,7 @@ def render_bouquet_cycles(
     fill_data = bpy.data.lights.new(name="FillSoftbox", type='AREA')
     fill_data.energy = 110.0
     fill_data.size = 2.4
-    fill_data.color = srgb_to_linear_rgb((0.88, 0.93, 1.0))
+    fill_data.color = srgb_to_linear_rgb((0.86, 0.91, 1.00))
     fill_obj = bpy.data.objects.new("FillSoftbox", fill_data)
     fill_obj.location = (2.8, -0.2, 2.6)
     track_to_point(fill_obj, target_center)
@@ -678,7 +678,7 @@ def render_bouquet_cycles(
     rim_data = bpy.data.lights.new(name="RimLight", type='AREA')
     rim_data.energy = 360.0
     rim_data.size = 1.5
-    rim_data.color = srgb_to_linear_rgb((0.98, 1.00, 0.95))
+    rim_data.color = srgb_to_linear_rgb((0.94, 0.96, 0.90))
     rim_obj = bpy.data.objects.new("RimLight", rim_data)
     rim_obj.location = (0.2, 2.8, -2.2)
     track_to_point(rim_obj, target_center)

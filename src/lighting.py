@@ -26,24 +26,24 @@ class StudioLighting:
     def __init__(self):
         # 1. Key light: sculpted directional illumination from upper-left (skims across petal curves)
         self.key = DirectionalLight(
-            direction=np.array([-0.58, 0.58, 0.48]),
-            color=np.array([1.0, 0.98, 0.94]),
-            intensity=1.45
+            direction=normalize(np.array([-0.52, 0.72, 0.46])),
+            color=np.array([1.00, 0.975, 0.940]),
+            intensity=1.60
         )
         # 2. Fill light: soft cool ambient fill from lower-right
         self.fill = DirectionalLight(
-            direction=np.array([0.55, 0.28, 0.62]),
-            color=np.array([0.88, 0.94, 1.0]),
-            intensity=0.58
+            direction=normalize(np.array([0.60, 0.22, 0.76])),
+            color=np.array([0.86, 0.91, 1.00]),
+            intensity=0.32
         )
         # 3. Rim / Back light: edge backlight from behind-above for petal and leaf translucency
         self.rim = DirectionalLight(
-            direction=np.array([0.15, 0.75, -0.64]),
-            color=np.array([0.96, 0.98, 0.92]),
-            intensity=0.85
+            direction=normalize(np.array([0.10, 0.80, -0.58])),
+            color=np.array([0.94, 0.96, 0.90]),
+            intensity=0.55
         )
         # Ambient color: refined chiaroscuro fill
-        self.ambient_radiance = np.array([0.075, 0.088, 0.075], dtype=np.float32)
+        self.ambient_radiance = np.array([0.048, 0.056, 0.048], dtype=np.float32)
 
     def shade_surface(
         self,
@@ -110,8 +110,8 @@ def evaluate_background_field(u: np.ndarray, v: np.ndarray) -> np.ndarray:
     light_pool = np.exp(-3.2 * r2)[:, :, None]
     
     # Colors: museum-quality velvety dark charcoal-sage with soft warm botanical luminance
-    center_color = np.array([0.014, 0.018, 0.015], dtype=np.float32).reshape(1, 1, 3)
-    edge_color = np.array([0.003, 0.004, 0.0035], dtype=np.float32).reshape(1, 1, 3)
+    center_color = np.array([0.040, 0.048, 0.040], dtype=np.float32).reshape(1, 1, 3)
+    edge_color = np.array([0.009, 0.011, 0.009], dtype=np.float32).reshape(1, 1, 3)
     
     # Soft vertical atmospheric gradation
     vert_falloff = (0.92 + 0.16 * (1.0 - v))[:, :, None]

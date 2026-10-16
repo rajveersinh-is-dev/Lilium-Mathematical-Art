@@ -594,7 +594,7 @@ class BouquetScene:
             # 1. Hero Focal Blossom: Majestic central anchor, broad and radiant
             {
                 "id": 1,
-                "center": np.array([-0.06, 0.04, 0.44]),
+                "center": np.array([0.00, 0.00, 0.55]),
                 "facing": normalize(np.array([0.04, 0.12, 0.99])),
                 "up": normalize(np.array([-0.08, 0.98, -0.05])),
                 "scale": 1.05,
@@ -605,7 +605,7 @@ class BouquetScene:
             # 2. Right Mid-Tier Trumpet: Nestled right of focal bloom, flaring outward
             {
                 "id": 2,
-                "center": np.array([0.54, -0.08, 0.28]),
+                "center": np.array([0.80, -0.10, 0.38]),
                 "facing": normalize(np.array([0.38, 0.10, 0.92])),
                 "up": normalize(np.array([-0.12, 0.98, -0.15])),
                 "scale": 0.96,
@@ -616,7 +616,7 @@ class BouquetScene:
             # 3. Left Profile Trumpet Blossom: Dramatic 3D side profile showcasing long perianth tube & reflexed sepals
             {
                 "id": 3,
-                "center": np.array([-0.88, 0.16, 0.15]),
+                "center": np.array([-0.95, 0.10, 0.15]),
                 "facing": normalize(np.array([-0.86, 0.14, 0.48])),
                 "up": normalize(np.array([0.18, 0.94, -0.28])),
                 "scale": 0.90,
@@ -627,7 +627,7 @@ class BouquetScene:
             # 4. Upper Right Bower Blossom: Youthful trumpet framing upper right flank
             {
                 "id": 4,
-                "center": np.array([0.68, 0.38, 0.14]),
+                "center": np.array([0.70, 0.45, 0.10]),
                 "facing": normalize(np.array([0.48, 0.34, 0.80])),
                 "up": normalize(np.array([-0.20, 0.88, -0.42])),
                 "scale": 0.88,
@@ -638,7 +638,7 @@ class BouquetScene:
             # 5. Lower Cascade Left Blossom: Cradled below hero bloom, nodding downward
             {
                 "id": 5,
-                "center": np.array([-0.44, -0.38, 0.32]),
+                "center": np.array([-0.55, -0.42, 0.45]),
                 "facing": normalize(np.array([-0.22, -0.38, 0.89])),
                 "up": normalize(np.array([0.14, 0.82, 0.55])),
                 "scale": 0.90,
@@ -649,7 +649,7 @@ class BouquetScene:
             # 6. Lower Cascade Right Blossom: Cradled below hero bloom, nodding downward-right
             {
                 "id": 6,
-                "center": np.array([0.42, -0.42, 0.26]),
+                "center": np.array([0.55, -0.48, 0.40]),
                 "facing": normalize(np.array([0.24, -0.38, 0.89])),
                 "up": normalize(np.array([-0.12, 0.82, 0.55])),
                 "scale": 0.90,
@@ -660,7 +660,7 @@ class BouquetScene:
             # 7. Deep Midground Blossom: Nestled deeper within the bouquet, creating true 3D spatial depth
             {
                 "id": 7,
-                "center": np.array([-0.26, 0.38, 0.02]),
+                "center": np.array([-0.30, 0.42, -0.05]),
                 "facing": normalize(np.array([-0.18, 0.42, 0.88])),
                 "up": normalize(np.array([0.12, 0.88, -0.45])),
                 "scale": 0.84,
@@ -671,7 +671,7 @@ class BouquetScene:
             # 8. Crown Apex Developing Bud: Slender jade-and-ivory spire reaching upward to the light
             {
                 "id": 8,
-                "center": np.array([0.06, 0.74, 0.12]),
+                "center": np.array([0.08, 0.80, 0.10]),
                 "facing": normalize(np.array([0.06, 0.88, 0.46])),
                 "up": normalize(np.array([-0.05, 0.46, -0.88])),
                 "scale": 0.82,
@@ -682,7 +682,7 @@ class BouquetScene:
             # 9. Upper-Left Satellite Bud: Fresh youthful bud extending naturally to the upper left
             {
                 "id": 9,
-                "center": np.array([-0.60, 0.54, 0.08]),
+                "center": np.array([-0.65, 0.58, 0.05]),
                 "facing": normalize(np.array([-0.52, 0.74, 0.42])),
                 "up": normalize(np.array([0.24, 0.48, -0.84])),
                 "scale": 0.76,
@@ -725,6 +725,35 @@ class BouquetScene:
 
         # Collision detection: guarantees leaves cradle blooms without piercing perianths or clipping into each other
         accepted_sample_pts: List[np.ndarray] = []
+
+        def _leaf_clears_flowers(attach: np.ndarray, direction: np.ndarray, length: float, f_configs: List[Dict[str, Any]]) -> Tuple[bool, Any]:
+            leaf_tip = attach + length * direction
+            leaf_mid = (attach + leaf_tip) * 0.5
+            leaf_sphere_r = length * 0.55
+            for fc in f_configs:
+                fc_center = np.asarray(fc["center"])
+                petal_sphere_r = 0.82 * fc["scale"]   # ~max petal radius
+                if np.linalg.norm(leaf_mid - fc_center) < leaf_sphere_r + petal_sphere_r:
+                    return False, fc_center
+            return True, None
+
+        def _resolve_leaf_collision(attach: np.ndarray, dir_vec: np.ndarray, length: float) -> Tuple[np.ndarray, float]:
+            clears, off_center = _leaf_clears_flowers(attach, dir_vec, length, flower_configs)
+            if clears:
+                return dir_vec, length
+            curr_dir = dir_vec.copy()
+            for _ in range(5):
+                away = normalize(attach - off_center)
+                if np.linalg.norm(away) < 1e-4:
+                    away = np.array([0.0, 1.0, 0.0])
+                rot_axis = normalize(np.cross(curr_dir, away))
+                if np.linalg.norm(rot_axis) < 1e-4:
+                    rot_axis = np.array([0.0, 0.0, 1.0])
+                curr_dir = normalize(rodrigues_rotation(curr_dir, rot_axis, np.radians(20.0)))
+                clears_rot, off_center = _leaf_clears_flowers(attach, curr_dir, length, flower_configs)
+                if clears_rot:
+                    return curr_dir, length
+            return curr_dir, length * 0.75
 
         def is_leaf_valid(leaf: LilyLeaf) -> bool:
             verts, _, _, uvs = leaf.generate_mesh(n_s=18, n_t=7)
@@ -801,10 +830,12 @@ class BouquetScene:
                     self.rng.uniform(0.65, 0.88),
                     self.rng.uniform(-0.16, -0.04)
                 ]))
+                length = self.rng.uniform(0.88, 1.20)
+                dir_vec, length = _resolve_leaf_collision(attach, dir_vec, length)
                 leaf = LilyLeaf(
                     attach_point=attach,
                     direction=dir_vec,
-                    length=self.rng.uniform(0.88, 1.20),
+                    length=length,
                     max_width=self.rng.uniform(0.13, 0.18),
                     droop=self.rng.uniform(0.24, 0.36),
                     curl=self.rng.uniform(-0.06, 0.06),
@@ -831,10 +862,12 @@ class BouquetScene:
                     pitch + self.rng.uniform(-0.05, 0.05),
                     self.rng.uniform(-0.16, -0.04)
                 ]))
+                length = self.rng.uniform(1.10, 1.30)
+                dir_vec, length = _resolve_leaf_collision(attach, dir_vec, length)
                 leaf = LilyLeaf(
                     attach_point=attach,
                     direction=dir_vec,
-                    length=self.rng.uniform(1.10, 1.30),
+                    length=length,
                     max_width=self.rng.uniform(0.14, 0.17),
                     droop=self.rng.uniform(0.16, 0.22),
                     curl=-0.02,
@@ -861,10 +894,12 @@ class BouquetScene:
                     pitch + self.rng.uniform(-0.05, 0.05),
                     self.rng.uniform(-0.16, -0.04)
                 ]))
+                length = self.rng.uniform(1.10, 1.30)
+                dir_vec, length = _resolve_leaf_collision(attach, dir_vec, length)
                 leaf = LilyLeaf(
                     attach_point=attach,
                     direction=dir_vec,
-                    length=self.rng.uniform(1.10, 1.30),
+                    length=length,
                     max_width=self.rng.uniform(0.14, 0.17),
                     droop=self.rng.uniform(0.16, 0.22),
                     curl=0.02,
@@ -890,10 +925,12 @@ class BouquetScene:
                     -self.rng.uniform(0.20, 0.40),
                     self.rng.uniform(-0.12, 0.0)
                 ]))
+                length = self.rng.uniform(0.95, 1.15)
+                dir_vec, length = _resolve_leaf_collision(attach, dir_vec, length)
                 leaf = LilyLeaf(
                     attach_point=attach,
                     direction=dir_vec,
-                    length=self.rng.uniform(0.95, 1.15),
+                    length=length,
                     max_width=self.rng.uniform(0.14, 0.17),
                     droop=self.rng.uniform(0.16, 0.22),
                     curl=-0.02,
@@ -918,10 +955,12 @@ class BouquetScene:
                     -self.rng.uniform(0.20, 0.40),
                     self.rng.uniform(-0.12, 0.0)
                 ]))
+                length = self.rng.uniform(0.95, 1.15)
+                dir_vec, length = _resolve_leaf_collision(attach, dir_vec, length)
                 leaf = LilyLeaf(
                     attach_point=attach,
                     direction=dir_vec,
-                    length=self.rng.uniform(0.95, 1.15),
+                    length=length,
                     max_width=self.rng.uniform(0.14, 0.17),
                     droop=self.rng.uniform(0.16, 0.22),
                     curl=0.02,
@@ -947,10 +986,12 @@ class BouquetScene:
                     self.rng.uniform(0.15, 0.35),
                     -self.rng.uniform(0.08, 0.18)
                 ]))
+                length = self.rng.uniform(0.65, 0.85)
+                dir_vec, length = _resolve_leaf_collision(attach, dir_vec, length)
                 leaf = LilyLeaf(
                     attach_point=stem_pt,
                     direction=dir_vec,
-                    length=self.rng.uniform(0.65, 0.85),
+                    length=length,
                     max_width=self.rng.uniform(0.13, 0.16),
                     droop=self.rng.uniform(0.12, 0.18),
                     curl=0.0,

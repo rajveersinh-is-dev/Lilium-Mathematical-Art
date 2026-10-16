@@ -21,7 +21,7 @@ Normalized screen coordinates are defined by:
 \begin{equation}
 u = \frac{x + \frac{1}{2}}{W}, \quad v = \frac{y + \frac{1}{2}}{H}.
 \end{equation}
-Ray direction through pixel $(u, v)$ with field of view $\theta_{\mathrm{fov}} = 36^\circ$ is given by:
+Ray direction through pixel $(u, v)$ with field of view $\theta_{\mathrm{fov}} = 34^\circ$ is given by:
 \begin{equation}
 \mathbf{r}(u, v) = \frac{\mathbf{d}_0 + (2u - 1)\tan\frac{\theta}{2}\mathbf{u}_r + (1 - 2v)\tan\frac{\theta}{2}\mathbf{u}_{up}}{\|\mathbf{d}_0 + (2u - 1)\tan\frac{\theta}{2}\mathbf{u}_r + (1 - 2v)\tan\frac{\theta}{2}\mathbf{u}_{up}\|}.
 \end{equation}
@@ -75,7 +75,7 @@ V(s, t) = 1 + \sum_{k=1}^4 a_k \exp\left(-\frac{(|t| - \tau_k(s))^2}{2\sigma_k^2
 \section{Androecium and Gynoecium}
 Versatile anthers are curved 2-lobed thecae with central dehiscence sulcus:
 \begin{equation}
-r_{\mathrm{theca}}(\theta) = R_0 (1 - 0.35 \cos 2\theta), \quad \mathbf{C}_{\mathrm{pollen}} = [0.94, 0.50, 0.04]^T.
+r_{\mathrm{theca}}(\theta) = R_0 (1 - 0.35 \cos 2\theta), \quad \mathbf{C}_{\mathrm{pollen}} = [0.43, 0.17, 0.03]^T.
 \end{equation}
 The style apex terminates in a 3-lobed moist glistening stigma:
 \begin{equation}
@@ -100,7 +100,7 @@ I(\mathbf{x}) = \mathbf{c}_{\mathrm{alb}} I_a A_{\mathrm{ssao}} + I_{\mathrm{key
 \end{equation}
 
 \section{Macro Optics, Thin-Lens Bokeh and Photographic Response}
-Depth of field simulates a physical macro thin-lens aperture focused at $z_{\mathrm{focus}} = 3.92$ with Circle of Confusion $C(z)$ and 28-tap Fermat spiral bokeh sampling:
+Depth of field simulates a physical macro thin-lens aperture focused at $z_{\mathrm{focus}} = 4.15$ with Circle of Confusion $C(z)$ and 28-tap Fermat spiral bokeh sampling:
 \begin{equation}
 C(z) = \min\left( r_{\max}, k_{\mathrm{CoC}} \frac{|z - z_{\mathrm{focus}}|}{z} \right), \quad \mathbf{I}_{\mathrm{DoF}}(\mathbf{u}) = \frac{\sum_{i=1}^{28} w_i \mathbf{I}(\mathbf{u} + C(z) \boldsymbol{\phi}_i)}{\sum_{i=1}^{28} w_i}.
 \end{equation}

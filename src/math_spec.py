@@ -16,7 +16,7 @@ def get_mathematical_model_data() -> Dict[str, Any]:
         "domain": {
             "width": 2400,
             "height": 1440,
-            "fov_deg": 36.0,
+            "fov_deg": 34.0,
             "focal_length": "1 / \\tan(\\theta_{\\mathrm{fov}} / 2)",
         },
         "petal_profile": {
@@ -37,12 +37,12 @@ def get_mathematical_model_data() -> Dict[str, Any]:
             "pistil": 1
         },
         "lighting": {
-            "key_dir": [-0.42, 0.65, 0.63],
-            "fill_dir": [0.55, 0.38, 0.74],
-            "rim_dir": [0.20, 0.72, -0.66],
-            "key_intensity": 1.25,
-            "fill_intensity": 0.55,
-            "rim_intensity": 0.45
+            "key_dir": [-0.52, 0.72, 0.46],
+            "fill_dir": [0.60, 0.22, 0.76],
+            "rim_dir": [0.10, 0.80, -0.58],
+            "key_intensity": 1.60,
+            "fill_intensity": 0.32,
+            "rim_intensity": 0.55
         }
     }
 
@@ -92,7 +92,7 @@ $ r_"theca" (theta) = R_0 (1 - 0.35 cos 2theta) e^(-32 t^2), quad r_"stigma" (th
 
 $ S_"key" (bold(x)) = frac(1, 16) sum_(i=1)^(16) bb(1) lr([ z_L (bold(x)) - delta_"bias" <= Z_"SM" (bold(u)_L + r_"pcf" bold(xi)_i) ]), quad A_"ssao" (bold(x)) = max lr(( 0, 1 - frac(1, 16) sum_(i=1)^(16) bb(1) lr([ z_s > z_"sample" ]) frac(max(0, bold(n) dot bold(v)_i), 1 + d_i^2) )), $
 
-$ C(z) = min lr(( r_max, k_"CoC" frac(|z - 3.95|, z) )), quad bold(I)_"DoF" (bold(u)) = frac(1, sum_(i=1)^(32) w_i) sum_(i=1)^(32) w_i bold(I) lr(( bold(u) + C(z) bold(phi)_i )), quad bold(phi)_i = sqrt(frac(i + 0.5, 32)) mat(cos(2.40 i); sin(2.40 i)), quad delta_"CA" = kappa_"disp" r^2. $
+$ C(z) = min lr(( r_max, k_"CoC" frac(|z - 4.15|, z) )), quad bold(I)_"DoF" (bold(u)) = frac(1, sum_(i=1)^(32) w_i) sum_(i=1)^(32) w_i bold(I) lr(( bold(u) + C(z) bold(phi)_i )), quad bold(phi)_i = sqrt(frac(i + 0.5, 32)) mat(cos(2.40 i); sin(2.40 i)), quad delta_"CA" = kappa_"disp" r^2. $
 """
 
 
@@ -123,7 +123,7 @@ Normalized screen coordinates are defined by:
 \begin{equation}
 u = \frac{x + \frac{1}{2}}{W}, \quad v = \frac{y + \frac{1}{2}}{H}.
 \end{equation}
-Ray direction through pixel $(u, v)$ with field of view $\theta_{\mathrm{fov}} = 36^\circ$ is given by:
+Ray direction through pixel $(u, v)$ with field of view $\theta_{\mathrm{fov}} = 34^\circ$ is given by:
 \begin{equation}
 \mathbf{r}(u, v) = \frac{\mathbf{d}_0 + (2u - 1)\tan\frac{\theta}{2}\mathbf{u}_r + (1 - 2v)\tan\frac{\theta}{2}\mathbf{u}_{up}}{\|\mathbf{d}_0 + (2u - 1)\tan\frac{\theta}{2}\mathbf{u}_r + (1 - 2v)\tan\frac{\theta}{2}\mathbf{u}_{up}\|}.
 \end{equation}
@@ -177,7 +177,7 @@ V(s, t) = 1 + \sum_{k=1}^4 a_k \exp\left(-\frac{(|t| - \tau_k(s))^2}{2\sigma_k^2
 \section{Androecium and Gynoecium}
 Versatile anthers are curved 2-lobed thecae with central dehiscence sulcus:
 \begin{equation}
-r_{\mathrm{theca}}(\theta) = R_0 (1 - 0.35 \cos 2\theta), \quad \mathbf{C}_{\mathrm{pollen}} = [0.94, 0.50, 0.04]^T.
+r_{\mathrm{theca}}(\theta) = R_0 (1 - 0.35 \cos 2\theta), \quad \mathbf{C}_{\mathrm{pollen}} = [0.43, 0.17, 0.03]^T.
 \end{equation}
 The style apex terminates in a 3-lobed moist glistening stigma:
 \begin{equation}
@@ -202,7 +202,7 @@ I(\mathbf{x}) = \mathbf{c}_{\mathrm{alb}} I_a A_{\mathrm{ssao}} + I_{\mathrm{key
 \end{equation}
 
 \section{Macro Optics, Thin-Lens Bokeh and Photographic Response}
-Depth of field simulates a physical macro thin-lens aperture focused at $z_{\mathrm{focus}} = 3.92$ with Circle of Confusion $C(z)$ and 28-tap Fermat spiral bokeh sampling:
+Depth of field simulates a physical macro thin-lens aperture focused at $z_{\mathrm{focus}} = 4.15$ with Circle of Confusion $C(z)$ and 28-tap Fermat spiral bokeh sampling:
 \begin{equation}
 C(z) = \min\left( r_{\max}, k_{\mathrm{CoC}} \frac{|z - z_{\mathrm{focus}}|}{z} \right), \quad \mathbf{I}_{\mathrm{DoF}}(\mathbf{u}) = \frac{\sum_{i=1}^{28} w_i \mathbf{I}(\mathbf{u} + C(z) \boldsymbol{\phi}_i)}{\sum_{i=1}^{28} w_i}.
 \end{equation}
