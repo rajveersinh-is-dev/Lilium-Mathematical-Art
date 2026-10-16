@@ -678,17 +678,6 @@ class BouquetScene:
                 "opening": 0.15,
                 "is_bud": True,
                 "roll": 0.12
-            },
-            # 9. Upper-Left Satellite Bud: Fresh youthful bud extending naturally to the upper left
-            {
-                "id": 9,
-                "center": np.array([-0.65, 0.58, 0.05]),
-                "facing": normalize(np.array([-0.52, 0.74, 0.42])),
-                "up": normalize(np.array([0.24, 0.48, -0.84])),
-                "scale": 0.76,
-                "opening": 0.12,
-                "is_bud": True,
-                "roll": -0.15
             }
         ]
         

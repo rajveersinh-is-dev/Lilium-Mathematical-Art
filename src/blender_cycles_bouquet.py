@@ -628,6 +628,16 @@ def render_bouquet_cycles(
     # Studio Backdrop
     create_backdrop(scene)
     
+    from mathutils import Matrix
+
+    def get_camera_rotation(loc, tgt):
+        forward = (Vector(tgt) - Vector(loc)).normalized()
+        up_ref = Vector((0.0, 1.0, 0.0))
+        right = forward.cross(up_ref).normalized()
+        actual_up = right.cross(forward).normalized()
+        cam_matrix_3x3 = Matrix((right, actual_up, -forward)).transposed()
+        return cam_matrix_3x3.to_euler()
+
     def track_to_point(light_obj, target_pos):
         loc = Vector(light_obj.location)
         tgt = Vector(target_pos)
@@ -648,7 +658,7 @@ def render_bouquet_cycles(
     
     cam_obj = bpy.data.objects.new("Camera", cam_data)
     cam_obj.location = (0.0, 0.55, 4.55)
-    track_to_point(cam_obj, target_center)
+    cam_obj.rotation_euler = get_camera_rotation(cam_obj.location, target_center)
     scene.collection.objects.link(cam_obj)
     scene.camera = cam_obj
     
