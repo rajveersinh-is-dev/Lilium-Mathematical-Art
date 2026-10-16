@@ -667,17 +667,6 @@ class BouquetScene:
                 "opening": 0.74,
                 "is_bud": False,
                 "roll": 0.10
-            },
-            # 8. Crown Apex Developing Bud: Slender jade-and-ivory spire reaching upward to the light
-            {
-                "id": 8,
-                "center": np.array([0.08, 0.80, 0.10]),
-                "facing": normalize(np.array([0.06, 0.88, 0.46])),
-                "up": normalize(np.array([-0.05, 0.46, -0.88])),
-                "scale": 0.82,
-                "opening": 0.15,
-                "is_bud": True,
-                "roll": 0.12
             }
         ]
         
