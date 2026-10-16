@@ -9,8 +9,8 @@
   },
   "random_seed": 2026,
   "camera": {
-    "position": [0.0, 0.55, 4.55],
-    "target": [0.0, 0.06, 0.15],
+    "position": [0.0, 0.66, 7.15],
+    "target": [0.0, 0.16, 0.15],
     "fov_degrees": 34.0
   },
   "lighting": {

@@ -645,7 +645,7 @@ def render_bouquet_cycles(
         quat = dir_vec.to_track_quat('-Z', 'Y')
         light_obj.rotation_euler = quat.to_euler()
         
-    target_center = (0.0, 0.06, 0.15)
+    target_center = (0.0, 0.16, 0.15)
 
     # Camera: 105mm Macro Botanical Setup
     print("[2/4] Setting Photographic Camera (105mm Macro, F/5.6 DOF, AgX)...")
@@ -653,11 +653,11 @@ def render_bouquet_cycles(
     cam_data.lens_unit = 'FOV'
     cam_data.angle = np.radians(34.0)
     cam_data.dof.use_dof = True
-    cam_data.dof.focus_distance = 4.15
+    cam_data.dof.focus_distance = 6.90
     cam_data.dof.aperture_fstop = 5.6
     
     cam_obj = bpy.data.objects.new("Camera", cam_data)
-    cam_obj.location = (0.0, 0.55, 4.55)
+    cam_obj.location = (0.0, 0.66, 7.15)
     cam_obj.rotation_euler = get_camera_rotation(cam_obj.location, target_center)
     scene.collection.objects.link(cam_obj)
     scene.camera = cam_obj
