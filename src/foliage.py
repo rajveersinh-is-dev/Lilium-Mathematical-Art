@@ -602,12 +602,12 @@ class BouquetScene:
                 "is_bud": False,
                 "roll": 0.15
             },
-            # 2. Right Mid-Tier Trumpet: Nestled right of focal bloom, flaring outward (spaced out more to prevent crowding)
+            # 2. Right Mid-Tier Trumpet: Nestled right of focal bloom, flaring outward
             {
                 "id": 2,
-                "center": np.array([0.62, -0.12, 0.22]),
-                "facing": normalize(np.array([0.45, 0.15, 0.88])),
-                "up": normalize(np.array([-0.18, 0.98, -0.10])),
+                "center": np.array([0.54, -0.08, 0.28]),
+                "facing": normalize(np.array([0.38, 0.10, 0.92])),
+                "up": normalize(np.array([-0.12, 0.98, -0.15])),
                 "scale": 0.96,
                 "opening": 0.96,
                 "is_bud": False,
@@ -616,9 +616,9 @@ class BouquetScene:
             # 3. Left Profile Trumpet Blossom: Dramatic 3D side profile showcasing long perianth tube & reflexed sepals
             {
                 "id": 3,
-                "center": np.array([-0.92, 0.10, 0.10]),
-                "facing": normalize(np.array([-0.88, 0.10, 0.45])),
-                "up": normalize(np.array([0.22, 0.94, -0.25])),
+                "center": np.array([-0.88, 0.16, 0.15]),
+                "facing": normalize(np.array([-0.86, 0.14, 0.48])),
+                "up": normalize(np.array([0.18, 0.94, -0.28])),
                 "scale": 0.90,
                 "opening": 0.88,
                 "is_bud": False,
@@ -627,33 +627,42 @@ class BouquetScene:
             # 4. Upper Right Bower Blossom: Youthful trumpet framing upper right flank
             {
                 "id": 4,
-                "center": np.array([0.72, 0.42, 0.08]),
-                "facing": normalize(np.array([0.52, 0.38, 0.76])),
-                "up": normalize(np.array([-0.25, 0.86, -0.44])),
+                "center": np.array([0.68, 0.38, 0.14]),
+                "facing": normalize(np.array([0.48, 0.34, 0.80])),
+                "up": normalize(np.array([-0.20, 0.88, -0.42])),
                 "scale": 0.88,
                 "opening": 0.84,
                 "is_bud": False,
                 "roll": -0.26
             },
-            # 5. Lower Cascade Left Blossom: Cradled below hero bloom, nodding downward (spaced out more)
+            # 5. Lower Cascade Left Blossom: Cradled below hero bloom, nodding downward
             {
                 "id": 5,
-                "center": np.array([-0.52, -0.44, 0.28]),
-                "facing": normalize(np.array([-0.28, -0.42, 0.86])),
-                "up": normalize(np.array([0.18, 0.84, 0.52])),
+                "center": np.array([-0.44, -0.38, 0.32]),
+                "facing": normalize(np.array([-0.22, -0.38, 0.89])),
+                "up": normalize(np.array([0.14, 0.82, 0.55])),
                 "scale": 0.90,
                 "opening": 0.88,
                 "is_bud": False,
                 "roll": -0.22
             },
-            # 6. Lower Cascade Right Blossom: Removed to reduce crowding (Replaced by negative space)
-
+            # 6. Lower Cascade Right Blossom: Cradled below hero bloom, nodding downward-right
+            {
+                "id": 6,
+                "center": np.array([0.42, -0.42, 0.26]),
+                "facing": normalize(np.array([0.24, -0.38, 0.89])),
+                "up": normalize(np.array([-0.12, 0.82, 0.55])),
+                "scale": 0.90,
+                "opening": 0.88,
+                "is_bud": False,
+                "roll": 0.22
+            },
             # 7. Deep Midground Blossom: Nestled deeper within the bouquet, creating true 3D spatial depth
             {
                 "id": 7,
-                "center": np.array([-0.22, 0.44, -0.04]),
-                "facing": normalize(np.array([-0.12, 0.46, 0.88])),
-                "up": normalize(np.array([0.15, 0.86, -0.48])),
+                "center": np.array([-0.26, 0.38, 0.02]),
+                "facing": normalize(np.array([-0.18, 0.42, 0.88])),
+                "up": normalize(np.array([0.12, 0.88, -0.45])),
                 "scale": 0.84,
                 "opening": 0.74,
                 "is_bud": False,
@@ -662,8 +671,8 @@ class BouquetScene:
             # 8. Crown Apex Developing Bud: Slender jade-and-ivory spire reaching upward to the light
             {
                 "id": 8,
-                "center": np.array([0.08, 0.82, 0.06]),
-                "facing": normalize(np.array([0.08, 0.88, 0.46])),
+                "center": np.array([0.06, 0.74, 0.12]),
+                "facing": normalize(np.array([0.06, 0.88, 0.46])),
                 "up": normalize(np.array([-0.05, 0.46, -0.88])),
                 "scale": 0.82,
                 "opening": 0.15,
@@ -673,9 +682,9 @@ class BouquetScene:
             # 9. Upper-Left Satellite Bud: Fresh youthful bud extending naturally to the upper left
             {
                 "id": 9,
-                "center": np.array([-0.68, 0.60, 0.02]),
-                "facing": normalize(np.array([-0.58, 0.74, 0.35])),
-                "up": normalize(np.array([0.28, 0.48, -0.84])),
+                "center": np.array([-0.60, 0.54, 0.08]),
+                "facing": normalize(np.array([-0.52, 0.74, 0.42])),
+                "up": normalize(np.array([0.24, 0.48, -0.84])),
                 "scale": 0.76,
                 "opening": 0.12,
                 "is_bud": True,

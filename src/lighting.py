@@ -24,26 +24,26 @@ class DirectionalLight:
 class StudioLighting:
     """Three-point studio lighting with botanical chiaroscuro environment."""
     def __init__(self):
-        # 1. Key light: soft, diffused studio softbox illumination from upper-left
+        # 1. Key light: sculpted directional illumination from upper-left (skims across petal curves)
         self.key = DirectionalLight(
-            direction=np.array([-0.65, 0.55, 0.52]),
+            direction=np.array([-0.58, 0.58, 0.48]),
             color=np.array([1.0, 0.98, 0.94]),
-            intensity=1.15  # Reduced intensity for softer lighting, avoiding overexposure
+            intensity=1.45
         )
         # 2. Fill light: soft cool ambient fill from lower-right
         self.fill = DirectionalLight(
-            direction=np.array([0.55, 0.35, 0.76]),
-            color=np.array([0.90, 0.95, 1.0]),
-            intensity=0.75  # Increased fill to retain detail in shaded petals
+            direction=np.array([0.55, 0.28, 0.62]),
+            color=np.array([0.88, 0.94, 1.0]),
+            intensity=0.58
         )
         # 3. Rim / Back light: edge backlight from behind-above for petal and leaf translucency
         self.rim = DirectionalLight(
-            direction=np.array([0.15, 0.85, -0.50]),
+            direction=np.array([0.15, 0.75, -0.64]),
             color=np.array([0.96, 0.98, 0.92]),
-            intensity=0.45  # Considerably reduced rim light to prevent harsh, high-contrast streaks
+            intensity=0.85
         )
-        # Ambient color: heightened soft botanical ambient fill
-        self.ambient_radiance = np.array([0.12, 0.14, 0.12], dtype=np.float32)
+        # Ambient color: refined chiaroscuro fill
+        self.ambient_radiance = np.array([0.075, 0.088, 0.075], dtype=np.float32)
 
     def shade_surface(
         self,
@@ -96,9 +96,9 @@ class StudioLighting:
 
 def evaluate_background_field(u: np.ndarray, v: np.ndarray) -> np.ndarray:
     """
-    Evaluates soft botanical studio background tone:
-    A restrained, realistic dark-green/gray botanical background providing contrast
-    without appearing as a flat, artificial black void.
+    Evaluates deep botanical chiaroscuro background tone:
+    A museum-quality dark charcoal-forest green with a soft, warm botanical light pool
+    illuminating the space behind the white-lily bouquet.
     - u, v in [0, 1]
     """
     # Radial distance from floral focal point (upper center of bouquet)
@@ -107,14 +107,14 @@ def evaluate_background_field(u: np.ndarray, v: np.ndarray) -> np.ndarray:
     r2 = dx * dx * 1.25 + dy * dy
     
     # Soft Gaussian light pool behind bouquet
-    light_pool = np.exp(-2.5 * r2)[:, :, None]
+    light_pool = np.exp(-3.2 * r2)[:, :, None]
     
-    # Colors: restrained dark-green studio backdrop, significantly lighter than black void
-    center_color = np.array([0.065, 0.082, 0.070], dtype=np.float32).reshape(1, 1, 3)
-    edge_color = np.array([0.025, 0.035, 0.030], dtype=np.float32).reshape(1, 1, 3)
+    # Colors: museum-quality velvety dark charcoal-sage with soft warm botanical luminance
+    center_color = np.array([0.014, 0.018, 0.015], dtype=np.float32).reshape(1, 1, 3)
+    edge_color = np.array([0.003, 0.004, 0.0035], dtype=np.float32).reshape(1, 1, 3)
     
     # Soft vertical atmospheric gradation
-    vert_falloff = (0.85 + 0.25 * (1.0 - v))[:, :, None]
+    vert_falloff = (0.92 + 0.16 * (1.0 - v))[:, :, None]
     
     bg_rgb = (center_color * light_pool + edge_color * (1.0 - light_pool)) * vert_falloff
     return np.clip(bg_rgb, 0.0, 1.0)
