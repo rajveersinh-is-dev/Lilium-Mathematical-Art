@@ -218,36 +218,32 @@ class LilyTepal:
             
             # 4. Botanical 3D Cross-Section Architecture:
             # - Basal concave cup: inside throat (s < 0.35)
-            # Softened the throat cup depth to remove excessive creasing.
-            throat_cup = -0.022 * self.length * np.exp(-12.0 * (s_vals ** 1.8))[:, None] * (1.0 - T ** 2)
+            throat_cup = -0.032 * self.length * np.exp(-10.0 * (s_vals ** 1.8))[:, None] * (1.0 - T ** 2)
             
             # - Botanical 3D cross-section camber:
-            # Inner petals have a delicate boat-shaped trough;
-            # Outer sepals have an arched convex dorsal keel with subtly recurved edges.
-            # Reduced midrib camber so they don't look like flat plastic plates. Added gradual smoothing.
+            # Inner petals have a deep concave boat-shaped trough;
+            # Outer sepals have an arched convex dorsal keel with recurved edges
             if self.is_inner:
-                midrib_camber = -0.028 * self.length * (np.sin(np.pi * (s_vals ** 0.90)) ** 1.2)[:, None] * (1.0 - T ** 2)
+                midrib_camber = -0.046 * self.length * (np.sin(np.pi * (s_vals ** 0.85)) ** 1.1)[:, None] * (1.0 - T ** 2)
             else:
-                midrib_camber = -0.018 * self.length * (np.sin(np.pi * (s_vals ** 0.90)) ** 1.2)[:, None] * (1.0 - (T ** 2) ** 1.4)
+                midrib_camber = -0.034 * self.length * (np.sin(np.pi * (s_vals ** 0.85)) ** 1.1)[:, None] * (1.0 - (T ** 2) ** 1.2)
                 
             # - Ventral nectary furrow along midrib
             furrow_mask = (s_vals > 0.04) & (s_vals < 0.46)
             furrow_s = np.where(furrow_mask, np.sin(np.pi * (s_vals - 0.04) / 0.42), 0.0)
-            ventral_furrow = -0.010 * self.length * furrow_s[:, None] * np.exp(-18.0 * (T ** 2))
+            ventral_furrow = -0.016 * self.length * furrow_s[:, None] * np.exp(-24.0 * (T ** 2))
             
             # - Vertical margin waves and organic edge undulation (multi-harmonic ruffles)
-            # Subtler ruffle scale for healthy, fresh lilies, eliminating unnatural spikes.
-            ruffle_scale = (0.012 if self.is_inner else 0.008) * self.length
+            ruffle_scale = (0.024 if self.is_inner else 0.018) * self.length
             edge_ruffle = (
                 ruffle_scale
-                * (S ** 1.4)
+                * (S ** 1.2)
                 * (T ** 2)
-                * (np.sin(2.0 * np.pi * self.ruffle_freq * S + self.phase) + 0.20 * np.sin(4.0 * np.pi * self.ruffle_freq * S))
+                * (np.sin(2.0 * np.pi * self.ruffle_freq * S + self.phase) + 0.35 * np.sin(4.0 * np.pi * self.ruffle_freq * S))
             )
             # Smoothly taper margin ruffles and camber to 0 at the acute apex tip (s=1)
-            # so all vertices across the width converge cleanly into a single sharp, organic pointed tip.
-            # Slightly longer taper near the tip for softer tips.
-            apex_taper = (np.clip((1.0 - S) / 0.12, 0.0, 1.0) ** 0.85)
+            # so all vertices across the width converge cleanly into a single sharp, organic pointed tip
+            apex_taper = (np.clip((1.0 - S) / 0.08, 0.0, 1.0) ** 0.75)
             c_elev = (throat_cup + midrib_camber + ventral_furrow + edge_ruffle) * apex_taper
             
             spine_x = r_s * dir_x
@@ -432,7 +428,7 @@ class LilyFlower:
         if not self.is_bud:
             n_recep_rad = 24
             n_recep_rings = 5
-            z_min_recep = -0.040 * self.scale
+            z_min_recep = -0.055 * self.scale
             z_max_recep = 0.035 * self.scale
             
             recep_verts_list = []
@@ -522,26 +518,25 @@ class LilyFlower:
                 ang = k * (np.pi / 3.0) + np.pi / 6.0 + ang_offset
                 
                 # Proportions:
-                # Reduced anther size substantially to avoid them dominating the image
-                anther_len = (0.030 if is_inner_stamen else 0.028) * self.scale * self.rng.uniform(0.95, 1.05)
-                anther_radius = 0.0035 * self.scale
+                anther_len = (0.145 if is_inner_stamen else 0.138) * self.scale * self.rng.uniform(0.95, 1.05)
+                anther_radius = 0.0175 * self.scale
                 
                 # Attachment at receptacle base
-                r_base = 0.010 * self.scale
-                z_base = -0.020 * self.scale
+                r_base = 0.026 * self.scale
+                z_base = -0.040 * self.scale
                 
                 # Natural stamen length & radial flare
                 stamen_len_var = self.rng.uniform(0.95, 1.05) * (1.04 if is_inner_stamen else 0.98)
-                r_tip = (0.16 if is_inner_stamen else 0.14) * self.scale * (self.opening ** 1.30) * self.rng.uniform(0.95, 1.05)
-                z_tip = (0.35 if is_inner_stamen else 0.33) * (self.opening ** 1.25) * stamen_len_var * self.scale
-                sag_tip = -0.010 * self.scale
+                r_tip = (0.22 if is_inner_stamen else 0.19) * self.scale * (self.opening ** 1.30) * self.rng.uniform(0.95, 1.05)
+                z_tip = (0.43 if is_inner_stamen else 0.40) * (self.opening ** 1.25) * stamen_len_var * self.scale
+                sag_tip = -0.018 * self.scale
                 
                 # True botanical sigmoid bowing:
                 # Emerging from receptacle, bowing outward gracefully into bell, then gently curving inward toward the style
                 u_steps = np.linspace(0.0, 1.0, 14)
                 fil_verts = []
                 for u in u_steps:
-                    bow_outward = 0.020 * self.scale * (self.opening ** 1.2) * np.sin(np.pi * (u ** 0.88))
+                    bow_outward = 0.046 * self.scale * (self.opening ** 1.2) * np.sin(np.pi * (u ** 0.88))
                     r_u = r_base * (1.0 - u) + r_tip * u + bow_outward
                     z_u = z_base * (1.0 - u) + z_tip * (u ** 0.92)
                     sag = sag_tip * (u ** 1.8)
@@ -599,13 +594,13 @@ class LilyFlower:
                     lat_frac = lat_idx / (n_lat - 1)
                     lat = -np.pi / 2.0 + lat_frac * np.pi
                     # Natural crescent curvature of anther pod
-                    crescent_curve = -0.002 * self.scale * (1.0 - np.cos(lat))
+                    crescent_curve = -0.0055 * self.scale * (1.0 - np.cos(lat))
                     
                     for lon_idx in range(n_lon):
                         lon_frac = lon_idx / n_lon
                         lon = lon_idx * (2.0 * np.pi / n_lon)
                         # Dehisced 2-lobed thecae with deep sulcus furrow
-                        theca_mod = 1.0 + 0.15 * np.cos(2.0 * lon)
+                        theca_mod = 1.0 + 0.45 * np.cos(2.0 * lon)
                         rad_curr = anther_radius * theca_mod * np.cos(lat)
                         
                         x_e = (anther_len * 0.5) * np.sin(lat)
@@ -641,9 +636,9 @@ class LilyFlower:
                 vert_offset += len(anther_verts)
                 
             # Central Pistil & 3-Lobed Stigma (Extends elegantly 15-20% BEYOND stamens)
-            pistil_len = (0.08 + 0.40 * (self.opening ** 1.25)) * self.scale
-            style_arch_tip = 0.015 * self.scale
-            style_droop_tip = -0.010 * self.scale
+            pistil_len = (0.08 + 0.52 * (self.opening ** 1.25)) * self.scale
+            style_arch_tip = 0.024 * self.scale
+            style_droop_tip = -0.016 * self.scale
             stigma_world = self.center + self.rot_matrix @ np.array([style_arch_tip, style_droop_tip, pistil_len])
             pistil_base = self.center + self.rot_matrix @ np.array([0.0, 0.0, 0.025 * self.scale])
             
@@ -657,7 +652,7 @@ class LilyFlower:
                 z_pis = (0.025 * (1.0 - u) + pistil_len * u)
                 local_pt = np.array([arch_u, droop_u, z_pis])
                 center_pt = self.center + self.rot_matrix @ local_pt
-                r_pis = (0.0055 - 0.0015 * u) * self.scale
+                r_pis = (0.0072 - 0.0020 * u) * self.scale
                 for phi_idx in range(8):
                     phi = phi_idx * (2.0 * np.pi / 8.0)
                     rad_v = np.array([np.cos(phi), np.sin(phi), 0.0])
@@ -677,7 +672,7 @@ class LilyFlower:
             
             # 3-Lobed Swollen Stigma Pad at style tip
             n_stigma_radial = 18
-            stigma_rad_base = 0.012 * self.scale
+            stigma_rad_base = 0.026 * self.scale
             stigma_tip_center = stigma_world + self.rot_matrix @ np.array([0.0, 0.0, 0.010 * self.scale])
             
             # Center vertex of stigma
@@ -688,7 +683,7 @@ class LilyFlower:
             for j in range(n_stigma_radial):
                 theta = j * (2.0 * np.pi / n_stigma_radial)
                 # Prominent 3-lobed glandular clover morphology
-                r_lobe = stigma_rad_base * (1.0 + 0.20 * np.cos(3.0 * theta))
+                r_lobe = stigma_rad_base * (1.0 + 0.44 * np.cos(3.0 * theta))
                 lobe_disp = np.array([r_lobe * np.cos(theta), r_lobe * np.sin(theta), -0.004 * self.scale])
                 pistil_verts.append(stigma_world + self.rot_matrix @ lobe_disp)
                 pistil_uvs_list.append([1.0, j / n_stigma_radial])
