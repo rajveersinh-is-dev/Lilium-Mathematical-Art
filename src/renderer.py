@@ -1245,12 +1245,12 @@ class LilyRenderer:
         self.camera_pos = (
             np.asarray(camera_pos, dtype=np.float64).reshape(3)
             if camera_pos is not None
-            else np.array([0.0, 0.55, 4.55], dtype=np.float64)
+            else np.array([0.0, 0.66, 7.15], dtype=np.float64)
         )
         self.camera_target = (
             np.asarray(camera_target, dtype=np.float64).reshape(3)
             if camera_target is not None
-            else np.array([0.0, 0.06, 0.15], dtype=np.float64)
+            else np.array([0.0, 0.16, 0.15], dtype=np.float64)
         )
         self.lighting = StudioLighting()
 

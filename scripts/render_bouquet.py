@@ -100,9 +100,9 @@ def main():
     scene = BouquetScene(seed=seed)
     scene_geom = scene.generate_bouquet_geometry()
     
-    cam_pos = config.get("camera", {}).get("position", [0.0, 0.08, 4.45])
-    cam_target = config.get("camera", {}).get("target", [0.0, -0.06, 0.0])
-    fov = config.get("camera", {}).get("fov_degrees", 36.0)
+    cam_pos = config.get("camera", {}).get("position", [0.0, 0.66, 7.15])
+    cam_target = config.get("camera", {}).get("target", [0.0, 0.16, 0.15])
+    fov = config.get("camera", {}).get("fov_degrees", 34.0)
     renderer = LilyRenderer(width=width, height=height, fov_deg=fov, camera_pos=cam_pos, camera_target=cam_target)
     
     rgb_array = renderer.render(scene_geom)
