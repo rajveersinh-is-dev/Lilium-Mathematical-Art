@@ -764,6 +764,20 @@ class BouquetScene:
             tie_cx = tie_cz = tie_samples = None
         TIE_Y_LO, TIE_Y_HI, TIE_MARGIN = -0.800, -0.575, 0.020
 
+        # Stem centreline samples, for keeping blades out of the stalks.
+        # Kept per stem with a bounding box so each candidate leaf is only
+        # tested against the stalks it could actually reach.
+        stem_boxes = []
+        for _st in self.stems:
+            _u = np.linspace(0.0, 1.0, 120)
+            _C = _st.bezier.evaluate(_u)
+            _r = _st.r_base * (1.0 - _u) + _st.r_tip * _u
+            _pad = float(_r.max())
+            stem_boxes.append((_C.min(axis=0) - _pad, _C.max(axis=0) + _pad, _C, _r))
+        stem_pts = stem_boxes if stem_boxes else None
+        STEM_BLADE_CLEAR = 0.0015   # blade must stand off the stalk surface
+        STEM_BASE_EMBED = 0.0070    # the petiole may meet the stalk it grows from
+
         # Collision detection: guarantees leaves cradle blooms without piercing perianths or clipping into each other
         accepted_sample_pts: List[np.ndarray] = []
 
@@ -797,7 +811,7 @@ class BouquetScene:
             return curr_dir, length * 0.75
 
         def is_leaf_valid(leaf: LilyLeaf) -> bool:
-            verts, _, _, uvs = leaf.generate_mesh(n_s=18, n_t=7)
+            verts, _, _, uvs = leaf.generate_mesh(n_s=30, n_t=11)
             s_coords = uvs[:, 0]
             
             # 1. Guard Hero focal blossom (Bloom 1): no leaf may enter its forward visual cone
@@ -844,7 +858,31 @@ class BouquetScene:
                         if np.any(np.hypot(P[:, 0] - tie_cx, P[:, 2] - tie_cz) < R + TIE_MARGIN):
                             return False
 
-            # 4. Leaf-to-Leaf Collision Detection (blades must not intersect)
+            # 4. Blades must not pass through a stem. The basal petiole is
+            #    exempt from the stand-off: that is where the leaf is attached.
+            if stem_pts is not None:
+                lo_b, hi_b = verts.min(axis=0), verts.max(axis=0)
+                near = [b for b in stem_pts
+                        if not (np.any(hi_b < b[0]) or np.any(lo_b > b[1]))]
+                if not near:
+                    SP = SR = None
+                else:
+                    SP = np.vstack([b[2] for b in near])
+                    SR = np.concatenate([b[3] for b in near])
+                s_here = uvs[:, 0]
+                for is_blade in ((True, False) if SP is not None else ()):
+                    sel = (s_here > 0.18) if is_blade else (s_here <= 0.18)
+                    if not np.any(sel):
+                        continue
+                    P = verts[sel]
+                    d = np.linalg.norm(P[:, None, :] - SP[None, :, :], axis=2)
+                    nearest = d.argmin(axis=1)
+                    clearance = d[np.arange(len(P)), nearest] - SR[nearest]
+                    limit = STEM_BLADE_CLEAR if is_blade else -STEM_BASE_EMBED
+                    if float(clearance.min()) < limit:
+                        return False
+
+            # 5. Leaf-to-Leaf Collision Detection (blades must not intersect)
             blade_mask = s_coords > 0.18
             candidate_blade = verts[blade_mask]
             
@@ -862,7 +900,7 @@ class BouquetScene:
         def try_add_leaf(leaf: LilyLeaf) -> bool:
             if is_leaf_valid(leaf):
                 self.leaves.append(leaf)
-                verts, _, _, uvs = leaf.generate_mesh(n_s=18, n_t=7)
+                verts, _, _, uvs = leaf.generate_mesh(n_s=30, n_t=11)
                 blade_pts = verts[uvs[:, 0] > 0.18][::2]
                 accepted_sample_pts.append(blade_pts)
                 return True
@@ -874,7 +912,7 @@ class BouquetScene:
         for ang in fan_angles:
             if abs(ang) < 0.16:
                 continue
-            for attempt in range(30):
+            for attempt in range(50):
                 a_jitter = ang + self.rng.uniform(-0.05, 0.05)
                 attach = np.array([
                     0.22 * np.cos(a_jitter),
@@ -907,7 +945,7 @@ class BouquetScene:
         # B. Left Lateral Flank (Radiating out to the left, framing the bouquet silhouette)
         left_pitches = [0.35, 0.18, 0.0, -0.18, -0.32]
         for pitch in left_pitches:
-            for attempt in range(30):
+            for attempt in range(50):
                 attach = np.array([
                     -self.rng.uniform(0.24, 0.40),
                     self.rng.uniform(-0.10, 0.30),
@@ -939,7 +977,7 @@ class BouquetScene:
         # C. Right Lateral Flank (Radiating out to the right, framing the bouquet silhouette)
         right_pitches = [0.35, 0.18, 0.0, -0.18, -0.32]
         for pitch in right_pitches:
-            for attempt in range(30):
+            for attempt in range(50):
                 attach = np.array([
                     self.rng.uniform(0.24, 0.40),
                     self.rng.uniform(-0.10, 0.30),
@@ -970,7 +1008,7 @@ class BouquetScene:
 
         # D. Lower Supportive Flank Collar (Left & Right only, cradling lower flowers, leaving stems and raffia tie visible)
         for k in range(3):
-            for attempt in range(30):
+            for attempt in range(50):
                 attach = np.array([
                     -self.rng.uniform(0.24, 0.38),
                     self.rng.uniform(-0.46, -0.34),
@@ -1000,7 +1038,7 @@ class BouquetScene:
                     break
 
         for k in range(3):
-            for attempt in range(30):
+            for attempt in range(50):
                 attach = np.array([
                     self.rng.uniform(0.24, 0.38),
                     self.rng.uniform(-0.46, -0.34),
@@ -1032,7 +1070,7 @@ class BouquetScene:
         # E. Cauline Accents (Behind lower flowers, peeking through gaps)
         for k in range(6):
             stem_idx = k
-            for attempt in range(30):
+            for attempt in range(50):
                 u_attach = self.rng.uniform(0.38, 0.58)
                 stem_pt = self.stems[stem_idx].curve.evaluate(np.array([u_attach]))[0]
                 stem_pt[2] = min(stem_pt[2], -0.10)

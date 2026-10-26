@@ -161,3 +161,34 @@ def test_raffia_tie_wraps_the_stem_bundle():
     stem_r = np.hypot(stems[band, 0] - cx, stems[band, 2] - cz).max()
     tie_r = np.hypot(tie[tie_band, 0] - cx, tie[tie_band, 2] - cz).max()
     assert tie_r >= stem_r, f"tie ({tie_r:.3f}) does not enclose the bundle ({stem_r:.3f})"
+
+
+def test_leaf_blades_do_not_pierce_stems():
+    """
+    A leaf may meet its own stalk at the petiole (s <= 0.18) -- that is where it
+    is attached -- but no blade may pass through a stem. Guards the stem
+    clearance rule in BouquetScene.is_leaf_valid.
+    """
+    from src.foliage import BouquetScene
+
+    scene = BouquetScene(seed=2026)
+    scene.generate_bouquet_geometry()
+    assert len(scene.leaves) > 10
+
+    worst_blade = np.inf
+    for leaf in scene.leaves:
+        verts, _, _, uvs = leaf.generate_mesh(n_s=32, n_t=12)
+        blade = uvs[:, 0] > 0.18
+        if not np.any(blade):
+            continue
+        pts = verts[blade]
+        for stem in scene.stems:
+            u = np.linspace(0.0, 1.0, 160)
+            centre = stem.bezier.evaluate(u)
+            radius = stem.r_base * (1.0 - u) + stem.r_tip * u
+            d = np.linalg.norm(pts[:, None, :] - centre[None, :, :], axis=2)
+            nearest = d.argmin(axis=1)
+            clearance = d[np.arange(len(pts)), nearest] - radius[nearest]
+            worst_blade = min(worst_blade, float(clearance.min()))
+
+    assert worst_blade > 0.0, f"a leaf blade pierces a stem by {-worst_blade:.5f}"
