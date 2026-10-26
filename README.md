@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.14-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Numba](https://img.shields.io/badge/Accelerated-Numba%20JIT-00A3E0?style=for-the-badge&logo=numba&logoColor=white)](https://numba.pydata.org/)
 [![Typst](https://img.shields.io/badge/Typesetting-Typst%20Engine-239DAD?style=for-the-badge&logo=typst&logoColor=white)](https://typst.app/)
-[![Tests](https://img.shields.io/badge/Tests-16%20Passing-success?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-18%20Passing-success?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![Style](https://img.shields.io/badge/Presentation%20Style-Hamid%20Naderi%20Yeganeh-E03A3E?style=for-the-badge)](#visual-presentation--artistic-style)
 
@@ -49,7 +49,7 @@ The composition is structured into two seamlessly integrated vertical regions:
 │                     (2400 × 1440 pixels)                        │
 │                                                                 │
 │   Photorealistic procedural 3D render of a lush bouquet of      │
-│   8 blooming white lilies and lanceolate foliage rendered       │
+│   7 blooming white lilies and lanceolate foliage rendered       │
 │   against a deep chiaroscuro forest field.                      │
 │                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
@@ -66,7 +66,7 @@ The composition is structured into two seamlessly integrated vertical regions:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Upper Botanical Domain (60% — 2400 × 1440 px)**: A photorealistic, analytical 3D synthesis of a bouquet of 9 botanical elements (blooming white lilies and developing jade-and-ivory buds, _Lilium candidum / Oriental hybrid 'Casa Blanca'_) with curving Bézier stems and arching lanceolate leaves. Lighting features physically based path tracing with Random Walk subsurface scattering, dual-lobe microfacet specular highlights, Voronoi epidermal papillae, deep crimson nectar markings, versatile anther thecae coated in golden pollen, and 105mm macro photographic optics.
+1. **Upper Botanical Domain (60% — 2400 × 1440 px)**: A photorealistic, analytical 3D synthesis of a bouquet of 7 blooming white lilies (_Lilium candidum / Oriental hybrid 'Casa Blanca'_) with curving Bézier stems and arching lanceolate leaves. Lighting features physically based path tracing with Random Walk subsurface scattering, dual-lobe microfacet specular highlights, Voronoi epidermal papillae, deep crimson nectar markings, versatile anther thecae coated in golden pollen, and 105mm macro photographic optics.
 2. **Mathematical Panel (40% — 2400 × 960 px)**: A pure white mathematical panel starting directly beneath the bouquet with no visual border. It presents:
    - Centered title: **White Lilies by Rajveersinh Vishal Pardeshi**
    - Exact explanatory sentence:
@@ -194,7 +194,7 @@ Stems follow cubic Bézier spatial curves with continuous Bishop parallel transp
 \mathbf{B}(u) = (1-u)^3 \mathbf{P}_0 + 3(1-u)^2 u \mathbf{P}_1 + 3(1-u) u^2 \mathbf{P}_2 + u^3 \mathbf{P}_3
 ```
 
-The bouquet incorporates 50 multi-tiered lanceolate leaves organized into background backdrop foliage, side-cradling foliage, cascading collar leaves, and stem-borne leaves, alongside succulent calyx receptacles bridging each bloom to its pedicel. Verified collision detection guarantees zero leaf-petal penetrations. Rather than planar fins, each leaf is an organic 3D parametric 2-manifold governed by gravitational catenary droop, lateral S-curvature, axial torsion, sunken midrib groove (*sulcus*), transverse camber, and parallel monocot venation:
+The bouquet incorporates 22 multi-tiered lanceolate leaves organized into background backdrop foliage, side-cradling foliage, cascading collar leaves, and stem-borne leaves, alongside succulent calyx receptacles bridging each bloom to its pedicel. Verified collision detection keeps every pair of solids apart: no leaf-petal penetrations, no leaf blade through a stem, and no raffia tie vertex inside a stem or a leaf (all three are pinned by the test suite). Rather than planar fins, each leaf is an organic 3D parametric 2-manifold governed by gravitational catenary droop, lateral S-curvature, axial torsion, sunken midrib groove (*sulcus*), transverse camber, and parallel monocot venation:
 
 ```math
 \mathbf{p}_{\mathrm{leaf}}(s, t) = \mathbf{p}_{\mathrm{midrib}}(s) + t\,w_{\mathrm{leaf}}(s)\,\mathbf{B}_{\mathrm{leaf}}(s) + c_{\mathrm{leaf}}(s, t)\,\mathbf{N}_{\mathrm{leaf}}(s)
@@ -232,7 +232,7 @@ Tone mapping applies an ACES-Reinhard curve to ensure smooth highlight rolloff:
 ### 11. Physical Macro Optics & Camera Pipeline
 
 The rendering pipeline simulates physical camera lens optics and full-frame CMOS sensor response:
-1. **Macro Thin-Lens Depth-of-Field (DoF)**: 32-tap Fermat spiral circle of confusion ($C(z) = \min(r_{\max}, k_{\mathrm{CoC}} \frac{|z - 3.95|}{z})$) rendering creamy optical bokeh on background foliage while preserving tack-sharp focus on the hero center bloom.
+1. **Macro Thin-Lens Depth-of-Field (DoF)**: 32-tap golden-angle (Fermat/Vogel) circle of confusion ($C(z) = \min(r_{\max}, k_{\mathrm{CoC}} \frac{|z - 4.15|}{z})$) rendering creamy optical bokeh on background foliage while preserving tack-sharp focus on the hero center bloom.
 2. **Lateral Chromatic Aberration**: Quadratic radial dispersion shifting red wavelengths outward ($\delta_{\mathrm{CA}} r^2$) and blue inward, mimicking prime macro glass dispersion.
 3. **Optical Bloom & Halation**: High-energy thresholded specular halation on glistening dew droplets, wet stigma pads, and glossy nectar canals.
 ### 12. Dual-Engine Rendering Architecture
@@ -248,7 +248,7 @@ The project implements a versatile **dual-engine rendering architecture** design
 
 2. **Analytical Software Engine — Numba JIT Parallelized Rasterizer (`src/renderer.py`)**:
    - An independent, zero-external-dependency software renderer implemented strictly in Python and Numba.
-   - Evaluates screen-space barycentric rasterization, analytical soft Z-buffering, dual-lobe microfacet BRDF, SSAO cavity shading, and thin-lens DoF in under 6 seconds.
+   - Evaluates screen-space barycentric rasterization, analytical soft Z-buffering, dual-lobe microfacet BRDF, SSAO cavity shading, and thin-lens DoF. On a 2 vCPU / 2 GB runner a 1200 x 720 frame rasterises in about 27 s, on top of roughly 44 s to build the scene (most of which is leaf collision solving); a 2400 x 1440 frame needs more memory than a 2 GB runner provides.
    - Provides instant first-principles verification and ensures the test suite runs deterministically on any standard CI/CD environment.
 
 The entry point `scripts/render_bouquet.py` automatically detects the local hardware and Blender environment: it invokes the Cycles OptiX path tracer for production-quality renders when available, with automatic fallback to the Numba rasterizer.
@@ -324,7 +324,7 @@ Run the end-to-end synthesis pipeline:
 ```bash
 python scripts/compose_final.py
 ```
-> **Performance**: The complete synthesis of the 116,864-triangle botanical scene, screen-space shading, Typst vector equation compilation, and master 2400 × 2400 composite takes **under 6 seconds** on a modern multi-core CPU via Numba JIT acceleration.
+> **Performance**: Measured on a 2 vCPU / 2 GB runner, the analytical path builds the 543,638-triangle botanical scene in about 44 s (dominated by the leaf collision solver) and rasterises a 1200 x 720 frame in about 27 s, for roughly 71 s before the Typst panel and master composite. Earlier revisions of this README quoted "under 6 seconds"; that figure predates the collision rules that keep leaves clear of stems, of the raffia tie and of each other. If you need the fast path, reduce the attempt budgets in `BouquetScene._build_scene`.
 
 ### 4. Run the Automated Test Suite
 Verify that all mathematical boundaries, projection coordinates, and rendering pipelines execute correctly:

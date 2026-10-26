@@ -4,7 +4,7 @@ foliage.py - Stems, lanceolate leaves, and bouquet spatial composition.
 Features:
 - Parametric cubic Bézier stems connecting flower receptacles to bouquet base.
 - Lanceolate lily leaves with longitudinal midrib groove and gravitational droop.
-- Cohesive bouquet arrangement with 8 blooming lilies, stems, and lush framing foliage.
+- Cohesive bouquet arrangement with 7 blooming lilies, stems, and lush framing foliage.
 """
 
 from typing import List, Dict, Any, Tuple
@@ -624,7 +624,7 @@ def generate_raffia_tie(stems=None) -> Tuple[np.ndarray, np.ndarray, np.ndarray,
 class BouquetScene:
     """
     Assembles an authentic, florist-grade botanical bouquet containing:
-    - 6 blooming lilies and 2 tapered buds with master 3D depth layering and organic dynamic poses.
+    - 7 blooming lilies with master 3D depth layering and organic dynamic poses.
     - Thick, succulent stems converging into an artisan hand-tied bunch with coiled natural raffia tie.
     - True green calyx/receptacle tubes bridging each bloom seamlessly to its stalk.
     - Lush, broad lanceolate lily foliage organized into supportive collar leaves, side flanks,
@@ -1101,7 +1101,7 @@ class BouquetScene:
     def generate_bouquet_geometry(self) -> Dict[str, Any]:
         """
         Synthesizes full geometry for the entire bouquet:
-        - All 8 blooming lilies
+        - All 7 blooming lilies
         - Receptacle calyx tubes for each bloom
         - All 8 stems
         - Collision-free verified foliage
