@@ -121,3 +121,43 @@ def test_compute_mesh_normals():
     for n in normals:
         assert np.isclose(np.linalg.norm(n), 1.0, atol=1e-5)
         assert np.isclose(n[2], 1.0, atol=1e-5)
+
+
+def test_raffia_tie_wraps_the_stem_bundle():
+    """
+    The artisan raffia tie must grip the real stem cluster: no cord vertex may
+    lie inside a stem tube, and the wrap must reach at least as far as the stems
+    it binds. Guards against the tie being authored against a nominal ellipse
+    that is narrower than the actual bundle.
+    """
+    from src.foliage import BouquetScene
+
+    scene = BouquetScene(seed=2026)
+    geom = scene.generate_bouquet_geometry()
+    verts = geom["vertices"]
+    mat_ids = geom["mat_ids"]
+
+    tie = verts[mat_ids == 9]
+    stems = verts[mat_ids == 6]
+    assert len(tie) > 500 and len(stems) > 500
+
+    sample = tie[::6]
+    worst = np.inf
+    for stem in scene.stems:
+        u = np.linspace(0.0, 1.0, 160)
+        centre = stem.bezier.evaluate(u)
+        radius = stem.r_base * (1.0 - u) + stem.r_tip * u
+        d = np.linalg.norm(sample[:, None, :] - centre[None, :, :], axis=2)
+        nearest = d.argmin(axis=1)
+        clearance = d[np.arange(len(sample)), nearest] - radius[nearest]
+        worst = min(worst, float(clearance.min()))
+    assert worst > 0.0, f"raffia tie penetrates a stem by {-worst:.5f}"
+
+    # the wrap must enclose the bundle at the tie height
+    band = (stems[:, 1] > -0.66) & (stems[:, 1] < -0.58)
+    tie_band = (tie[:, 1] > -0.66) & (tie[:, 1] < -0.58)
+    cx = 0.5 * (stems[band, 0].min() + stems[band, 0].max())
+    cz = 0.5 * (stems[band, 2].min() + stems[band, 2].max())
+    stem_r = np.hypot(stems[band, 0] - cx, stems[band, 2] - cz).max()
+    tie_r = np.hypot(tie[tie_band, 0] - cx, tie[tie_band, 2] - cz).max()
+    assert tie_r >= stem_r, f"tie ({tie_r:.3f}) does not enclose the bundle ({stem_r:.3f})"

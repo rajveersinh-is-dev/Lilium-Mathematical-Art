@@ -666,8 +666,8 @@ def render_bouquet_cycles(
     print("[3/4] Configuring 3-Point Chiaroscuro Softbox Lighting...")
     # 1. Key Softbox: Large octabox placed high to the left (60 deg angle)
     key_data = bpy.data.lights.new(name="KeySoftbox", type='AREA')
-    key_data.energy = 460.0
-    key_data.size = 1.8
+    key_data.energy = 430.0
+    key_data.size = 2.8   # larger source -> softer shadow terminator
     key_data.color = srgb_to_linear_rgb((1.00, 0.975, 0.940))
     key_obj = bpy.data.objects.new("KeySoftbox", key_data)
     key_obj.location = (-3.0, 2.2, 3.0)
@@ -676,9 +676,9 @@ def render_bouquet_cycles(
     
     # 2. Fill Softbox: Diffused fill on the right
     fill_data = bpy.data.lights.new(name="FillSoftbox", type='AREA')
-    fill_data.energy = 110.0
-    fill_data.size = 2.4
-    fill_data.color = srgb_to_linear_rgb((0.86, 0.91, 1.00))
+    fill_data.energy = 250.0
+    fill_data.size = 2.4   # real fill: lifts the shadow side
+    fill_data.color = srgb_to_linear_rgb((0.88, 0.92, 1.00))
     fill_obj = bpy.data.objects.new("FillSoftbox", fill_data)
     fill_obj.location = (2.8, -0.2, 2.6)
     track_to_point(fill_obj, target_center)
@@ -686,8 +686,8 @@ def render_bouquet_cycles(
     
     # 3. Translucency Rim Backlight: High behind bouquet
     rim_data = bpy.data.lights.new(name="RimLight", type='AREA')
-    rim_data.energy = 360.0
-    rim_data.size = 1.5
+    rim_data.energy = 180.0
+    rim_data.size = 2.2   # gentle edge light, no hot rim
     rim_data.color = srgb_to_linear_rgb((0.94, 0.96, 0.90))
     rim_obj = bpy.data.objects.new("RimLight", rim_data)
     rim_obj.location = (0.2, 2.8, -2.2)
@@ -696,7 +696,7 @@ def render_bouquet_cycles(
     
     # 4. Backdrop Halo Softbox: Placed behind bouquet pointing at backdrop to create soft chiaroscuro halo
     halo_data = bpy.data.lights.new(name="BackdropHalo", type='AREA')
-    halo_data.energy = 240.0
+    halo_data.energy = 200.0
     halo_data.size = 2.8
     halo_data.color = srgb_to_linear_rgb((0.32, 0.52, 0.36))
     halo_obj = bpy.data.objects.new("BackdropHalo", halo_data)

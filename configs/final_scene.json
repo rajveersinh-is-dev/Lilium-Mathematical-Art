@@ -17,19 +17,19 @@
     "key_light": {
       "direction": [-0.52, 0.72, 0.46],
       "color": [1.00, 0.975, 0.940],
-      "intensity": 1.60
+      "intensity": 1.45
     },
     "fill_light": {
       "direction": [0.60, 0.22, 0.76],
-      "color": [0.86, 0.91, 1.00],
-      "intensity": 0.32
+      "color": [0.88, 0.92, 1.00],
+      "intensity": 0.62
     },
     "rim_light": {
       "direction": [0.10, 0.80, -0.58],
-      "color": [0.94, 0.96, 0.90],
-      "intensity": 0.55
+      "color": [0.95, 0.96, 0.92],
+      "intensity": 0.30
     },
-    "ambient_radiance": [0.048, 0.056, 0.048]
+    "ambient_radiance": [0.075, 0.082, 0.075]
   },
   "perianth_model": {
     "tepals_per_flower": 6,

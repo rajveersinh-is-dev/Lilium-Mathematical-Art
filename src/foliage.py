@@ -308,13 +308,122 @@ def get_bundle_boundary(theta: float, y: float) -> np.ndarray:
     return np.array([c_x + r_wave * cos_t, y, c_z + r_wave * sin_t])
 
 
-def generate_raffia_tie() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _sample_stems(stems, n_per_stem: int = 400):
+    """Dense samples of every stem centreline: (x, y, z, tube radius)."""
+    xs, ys, zs, rs = [], [], [], []
+    for st in stems:
+        u = np.linspace(0.0, 1.0, n_per_stem)
+        C = st.bezier.evaluate(u)
+        r = st.r_base * (1.0 - u) + st.r_tip * u
+        xs.append(C[:, 0]); ys.append(C[:, 1]); zs.append(C[:, 2]); rs.append(r)
+    return (np.concatenate(xs), np.concatenate(ys),
+            np.concatenate(zs), np.concatenate(rs))
+
+
+def measure_bundle_envelope(stems, y_lo: float, y_hi: float):
     """
-    Generates high-fidelity artisan florist binding threads:
-    1. Dark natural hemp under-wrap (recessed tightly beneath coils, no flare)
-    2. Dense multi-turn tactile horizontal thread coils (11 tight, touching wraps)
-    3. Criss-cross diagonal cinch strands (French spiral tie)
-    4. Front artisan knot, bow loops, and two prominent drooping thread tails
+    Support function of the stem cluster's cross-section.
+
+    A cord under tension wraps the *convex hull* of the bundle, so the usable
+    boundary is  R(theta, y) = max_k [ c_k(theta, y) + r_k ],  the support
+    function of the union of the stem discs. Every stem point p satisfies
+    p . n <= R(theta, y), so a cord laid on R + margin can never enter a stem.
+    Returns (cx, cz, samples) with (cx, cz) the centroid of the cluster, which
+    lies inside the hull and is used as the polar origin.
+    """
+    X, Y, Z, Rr = _sample_stems(stems)
+    m = (Y >= y_lo) & (Y <= y_hi)
+    if m.sum() < 8:
+        raise ValueError("not enough stem samples across the tie band")
+    cx = float(X[m].mean())
+    cz = float(Z[m].mean())
+    return cx, cz, (X, Y, Z, Rr)
+
+
+def envelope_radius(samples, cx: float, cz: float, theta: float,
+                    y: float, y_slack: float = 0.0015) -> float:
+    """
+    Radius of the bundle's convex hull at (theta, y), about (cx, cz).
+
+    The height window is widened by each sample's own tube radius, because a
+    tilted stem of radius r centred at y' still occupies height y whenever
+    |y - y'| <= r. Ignoring this lets a cord slip into the flank of a leaning
+    stalk; the window makes the hull conservative, so the wrap stays clear.
+    """
+    X, Y, Z, Rr = samples
+    m = np.abs(Y - y) <= (Rr + y_slack)
+    if not m.any():
+        return 0.0
+    proj = (X[m] - cx) * np.cos(theta) + (Z[m] - cz) * np.sin(theta)
+    return float((proj + Rr[m]).max())
+
+
+def envelope_radius_many(samples, cx: float, cz: float, theta: np.ndarray,
+                         y: np.ndarray, y_slack: float = 0.0015) -> np.ndarray:
+    """Vectorised envelope_radius over arrays of (theta, y)."""
+    X, Y, Z, Rr = samples
+    theta = np.atleast_1d(theta)
+    y = np.atleast_1d(y)
+    out = np.zeros(len(theta))
+    for i in range(len(theta)):
+        m = np.abs(Y - y[i]) <= (Rr + y_slack)
+        if not m.any():
+            continue
+        out[i] = float(((X[m] - cx) * np.cos(theta[i])
+                        + (Z[m] - cz) * np.sin(theta[i]) + Rr[m]).max())
+    return out
+
+
+def _tube_along_polyline(
+    pts: np.ndarray,
+    radius,
+    n_prof: int,
+    uv_u_scale: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Sweeps a circular tube along a polyline using a stable reference frame."""
+    n = len(pts)
+    ref = np.array([0.0, 0.0, 1.0])
+    verts = []
+    uvs = []
+    for i in range(n):
+        nxt = pts[min(i + 1, n - 1)]
+        prv = pts[max(i - 1, 0)]
+        tan = normalize(nxt - prv)
+        if abs(float(np.dot(tan, ref))) > 0.98:
+            ref = np.array([0.0, 1.0, 0.0])
+        n_vec = normalize(np.cross(tan, ref))
+        b_vec = normalize(np.cross(tan, n_vec))
+        r = radius(i) if callable(radius) else radius
+        for p in range(n_prof):
+            phi = p * (2.0 * np.pi / n_prof)
+            verts.append(pts[i] + r * (np.cos(phi) * n_vec + np.sin(phi) * b_vec))
+            uvs.append([i / float(max(1, n - 1)) * uv_u_scale + 0.1, p / float(n_prof)])
+    verts = np.array(verts, dtype=np.float64)
+    uvs = np.array(uvs, dtype=np.float64)
+    faces = []
+    for i in range(n - 1):
+        for p in range(n_prof):
+            p_next = (p + 1) % n_prof
+            p0 = i * n_prof + p
+            p1 = i * n_prof + p_next
+            p2 = (i + 1) * n_prof + p
+            p3 = (i + 1) * n_prof + p_next
+            faces.append([p0, p1, p2])
+            faces.append([p1, p3, p2])
+    return verts, uvs, np.array(faces, dtype=np.int32)
+
+
+def generate_raffia_tie(stems=None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Generates high-fidelity artisan florist binding threads, laid on the *measured*
+    convex hull of the stem cluster so the cord grips the real bundle instead of a
+    nominal ellipse:
+
+    1. Dense helical thread coils, pitched at exactly one cord diameter so that
+       successive turns touch without self-overlapping
+    2. Criss-cross diagonal cinch strands resting on top of the coil layer
+    3. Front artisan knot, two bow loops and two drooping thread tails, all placed
+       outside the hull so that nothing intersects the stalks
     """
     all_verts = []
     all_faces = []
@@ -322,41 +431,62 @@ def generate_raffia_tie() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarra
     v_offset = 0
 
     y_min, y_max = -0.655, -0.585
+    cord_r = 0.0026
 
-    # Dense, tactile helical thread coils (13 tight, touching wraps directly around stem bundle)
-    n_coils = 13
+    if stems is not None:
+        cx, cz, samples = measure_bundle_envelope(stems, y_min - 0.012, y_max + 0.012)
+
+        def hull_r(theta: float, y: float) -> float:
+            return envelope_radius(samples, cx, cz, theta, y)
+
+        def boundary(theta: float, y: float) -> np.ndarray:
+            R = hull_r(theta, y)
+            return np.array([cx + R * np.cos(theta), y, cz + R * np.sin(theta)])
+    else:  # legacy fallback: nominal ellipse
+        cx, cz = -0.0055, -0.0866
+
+        def hull_r(theta: float, y: float) -> float:
+            p = get_bundle_boundary(theta, y)
+            return float(np.hypot(p[0] - cx, p[2] - cz))
+
+        def boundary(theta: float, y: float) -> np.ndarray:
+            return get_bundle_boundary(theta, y)
+
+    # Pitch the helix at no less than one cord diameter, so successive turns
+    # touch the way real twine does instead of interpenetrating.
+    coil_span = (y_max - y_min) - 0.006
+    n_coils = max(1, int(np.floor(coil_span / (2.0 * cord_r))))
+    pitch = coil_span / n_coils
+    assert pitch >= 2.0 * cord_r, "coil pitch must not be tighter than one cord diameter"
     steps_per_coil = 42
     total_steps = n_coils * steps_per_coil
     n_tube_prof = 14
-    cord_r = 0.0050
-    
-    coil_verts = []
-    coil_uvs = []
+
+    coil_centres = []
     for i in range(total_steps):
         t_frac = i / float(total_steps - 1)
         theta = t_frac * n_coils * 2.0 * np.pi
         y = y_min + 0.003 + t_frac * (y_max - y_min - 0.006)
-        
-        pt_bound = get_bundle_boundary(theta, y)
         n_dir = np.array([np.cos(theta), 0.0, np.sin(theta)])
-        center_pt = pt_bound + (cord_r * 0.95) * n_dir
-        
-        dt = 0.002
-        t_next = min(1.0, t_frac + dt)
-        th_next = t_next * n_coils * 2.0 * np.pi
-        y_next = y_min + 0.003 + t_next * (y_max - y_min - 0.006)
-        pt_next = get_bundle_boundary(th_next, y_next) + (cord_r * 0.95) * np.array([np.cos(th_next), 0.0, np.sin(th_next)])
-        
-        tangent = normalize(pt_next - center_pt)
-        normal = normalize(np.array([np.cos(theta), 0.0, np.sin(theta)]))
-        binormal = normalize(np.cross(tangent, normal))
-        
+        coil_centres.append(boundary(theta, y) + (cord_r * 1.02) * n_dir)
+    coil_centres = np.array(coil_centres)
+
+    coil_verts = []
+    coil_uvs = []
+    for i in range(total_steps):
+        centre = coil_centres[i]
+        nxt = coil_centres[min(i + 1, total_steps - 1)]
+        prv = coil_centres[max(i - 1, 0)]
+        tangent = normalize(nxt - prv)
+        theta = (i / float(total_steps - 1)) * n_coils * 2.0 * np.pi
+        n_raw = np.array([np.cos(theta), 0.0, np.sin(theta)])
+        binormal = normalize(np.cross(tangent, n_raw))
+        normal = normalize(np.cross(binormal, tangent))
         for p in range(n_tube_prof):
             phi = p * (2.0 * np.pi / n_tube_prof)
-            disp = cord_r * (np.cos(phi) * normal + np.sin(phi) * binormal)
-            coil_verts.append(center_pt + disp)
-            coil_uvs.append([t_frac * n_coils + 0.1, p / float(n_tube_prof)])
-            
+            coil_verts.append(centre + cord_r * (np.cos(phi) * normal + np.sin(phi) * binormal))
+            coil_uvs.append([(i / float(total_steps - 1)) * n_coils + 0.1, p / float(n_tube_prof)])
+
     coil_verts = np.array(coil_verts, dtype=np.float64)
     coil_uvs = np.array(coil_uvs, dtype=np.float64)
     coil_faces = []
@@ -369,57 +499,40 @@ def generate_raffia_tie() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarra
             p3 = (i + 1) * n_tube_prof + p_next
             coil_faces.append([p0, p1, p2])
             coil_faces.append([p1, p3, p2])
-            
+
     all_verts.append(coil_verts)
     all_faces.append(np.array(coil_faces, dtype=np.int32) + v_offset)
     all_uvs.append(coil_uvs)
     v_offset += len(coil_verts)
 
-    # 3. Criss-Cross Diagonal Cinch Strands
+    # --- 2. criss-cross cinch strands, resting on top of the coil layer ---
+    diag_r = 0.90 * cord_r
+    diag_off = 2.02 * cord_r + diag_r
     diag_steps = 48
     for sign in [1.0, -1.0]:
-        diag_verts = []
-        diag_uvs = []
+        diag_pts = []
         for i in range(diag_steps):
             u = i / float(diag_steps - 1)
             y = y_min + 0.005 + u * (y_max - y_min - 0.010)
             theta = 0.50 * np.pi + sign * (u - 0.5) * 1.30 * np.pi
-            pt_bound = get_bundle_boundary(theta, y)
             n_dir = np.array([np.cos(theta), 0.0, np.sin(theta)])
-            center_pt = pt_bound + (cord_r * 1.55) * n_dir
-            
-            t_vec = normalize(np.array([-np.sin(theta) * sign, 0.35, np.cos(theta) * sign]))
-            n_vec = n_dir
-            b_vec = normalize(np.cross(t_vec, n_vec))
-            
-            for p in range(10):
-                phi = p * (2.0 * np.pi / 10)
-                disp = (cord_r * 0.90) * (np.cos(phi) * n_vec + np.sin(phi) * b_vec)
-                diag_verts.append(center_pt + disp)
-                diag_uvs.append([u * 3.5 + 0.1, p / 10.0])
-                
-        diag_verts = np.array(diag_verts, dtype=np.float64)
-        diag_uvs = np.array(diag_uvs, dtype=np.float64)
-        diag_faces = []
-        for i in range(diag_steps - 1):
-            for p in range(10):
-                p_next = (p + 1) % 10
-                p0 = i * 10 + p
-                p1 = i * 10 + p_next
-                p2 = (i + 1) * 10 + p
-                p3 = (i + 1) * 10 + p_next
-                diag_faces.append([p0, p1, p2])
-                diag_faces.append([p1, p3, p2])
-                
-        all_verts.append(diag_verts)
-        all_faces.append(np.array(diag_faces, dtype=np.int32) + v_offset)
-        all_uvs.append(diag_uvs)
-        v_offset += len(diag_verts)
+            diag_pts.append(boundary(theta, y) + diag_off * n_dir)
+        d_verts, d_uvs, d_faces = _tube_along_polyline(np.array(diag_pts), diag_r, 10, 3.5)
+        all_verts.append(d_verts)
+        all_faces.append(d_faces + v_offset)
+        all_uvs.append(d_uvs)
+        v_offset += len(d_verts)
 
-    # 4. Front Artisan Knot, Bow Loops and Dangling Cord Tails
-    knot_center = get_bundle_boundary(0.50 * np.pi, -0.620) + np.array([0.0, 0.0, cord_r * 1.9])
-    
-    # A. Central Knot Core
+    # --- 3. artisan knot, seated on the front of the hull ---
+    theta_front = 0.50 * np.pi
+    y_knot = -0.620
+    knot_half_z = 0.011
+    knot_center = np.array([
+        cx,
+        y_knot,
+        cz + hull_r(theta_front, y_knot) + diag_off + knot_half_z,
+    ])
+
     n_k_lat = 12
     n_k_lon = 14
     knot_verts = []
@@ -432,11 +545,11 @@ def generate_raffia_tie() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarra
             k_disp = np.array([
                 0.014 * np.cos(lat) * np.cos(lon),
                 0.011 * np.sin(lat),
-                0.011 * np.cos(lat) * np.sin(lon)
+                knot_half_z * np.cos(lat) * np.sin(lon),
             ])
             knot_verts.append(knot_center + k_disp)
             knot_uvs.append([v_lat + 0.1, lo / float(n_k_lon)])
-            
+
     knot_verts = np.array(knot_verts, dtype=np.float64)
     knot_uvs = np.array(knot_uvs, dtype=np.float64)
     knot_faces = []
@@ -449,20 +562,16 @@ def generate_raffia_tie() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarra
             p3 = (la + 1) * n_k_lon + lo_next
             knot_faces.append([p0, p1, p2])
             knot_faces.append([p1, p3, p2])
-            
+
     all_verts.append(knot_verts)
     all_faces.append(np.array(knot_faces, dtype=np.int32) + v_offset)
     all_uvs.append(knot_uvs)
     v_offset += len(knot_verts)
 
-    # B. Two Elegant Bow Loops
+    # --- 4. two bow loops, swept forward of the knot so they clear the stalks ---
+    loop_r = 0.0038
     for loop_sign in [-1.0, 1.0]:
         n_l_steps = 28
-        n_l_prof = 10
-        l_verts = []
-        l_uvs = []
-        loop_r = 0.0038
-        
         angles = np.linspace(0.0, 2.0 * np.pi, n_l_steps)
         loop_pts = []
         for a in angles:
@@ -470,92 +579,38 @@ def generate_raffia_tie() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarra
             ly = knot_center[1] + 0.018 * np.sin(a)
             lz = knot_center[2] + 0.010 * (1.0 - np.cos(a))
             loop_pts.append(np.array([lx, ly, lz]))
-        loop_pts = np.array(loop_pts)
-        
-        for i in range(n_l_steps):
-            pt = loop_pts[i]
-            i_next = (i + 1) % n_l_steps
-            t_vec = normalize(loop_pts[i_next] - pt)
-            n_vec = np.array([0.0, 0.0, 1.0])
-            b_vec = normalize(np.cross(t_vec, n_vec))
-            n_vec = normalize(np.cross(b_vec, t_vec))
-            
-            for p in range(n_l_prof):
-                phi = p * (2.0 * np.pi / n_l_prof)
-                disp = loop_r * (np.cos(phi) * n_vec + np.sin(phi) * b_vec)
-                l_verts.append(pt + disp)
-                l_uvs.append([i / float(n_l_steps) + 0.1, p / float(n_l_prof)])
-                
-        l_verts = np.array(l_verts, dtype=np.float64)
-        l_uvs = np.array(l_uvs, dtype=np.float64)
-        l_faces = []
-        for i in range(n_l_steps - 1):
-            for p in range(n_l_prof):
-                p_next = (p + 1) % n_l_prof
-                p0 = i * n_l_prof + p
-                p1 = i * n_l_prof + p_next
-                p2 = (i + 1) * n_l_prof + p
-                p3 = (i + 1) * n_l_prof + p_next
-                l_faces.append([p0, p1, p2])
-                l_faces.append([p1, p3, p2])
-                
+        l_verts, l_uvs, l_faces = _tube_along_polyline(np.array(loop_pts), loop_r, 10, 1.0)
         all_verts.append(l_verts)
-        all_faces.append(np.array(l_faces, dtype=np.int32) + v_offset)
+        all_faces.append(l_faces + v_offset)
         all_uvs.append(l_uvs)
         v_offset += len(l_verts)
 
-    # C. Two Pronounced Drooping Thread Tails
-    tail_configs = [
-        {
-            "p0": knot_center + np.array([-0.006, -0.008, 0.003]),
-            "p1": knot_center + np.array([-0.026, -0.048, 0.012]),
-            "p2": knot_center + np.array([-0.040, -0.105, 0.010]),
-            "p3": knot_center + np.array([-0.028, -0.165, 0.003]),
-            "n_steps": 32, "n_prof": 10, "r": 0.0042
-        },
-        {
-            "p0": knot_center + np.array([0.006, -0.008, 0.003]),
-            "p1": knot_center + np.array([0.028, -0.042, 0.015]),
-            "p2": knot_center + np.array([0.044, -0.095, 0.014]),
-            "p3": knot_center + np.array([0.034, -0.145, 0.005]),
-            "n_steps": 28, "n_prof": 10, "r": 0.0039
-        }
+    # --- 5. two drooping tails, held in front of the stalks at every height ---
+    tail_cfg = [
+        {"dx0": -0.006, "dx3": -0.030, "y_end": -0.792, "r": 0.0042, "n_steps": 32},
+        {"dx0": 0.006, "dx3": 0.036, "y_end": -0.762, "r": 0.0039, "n_steps": 28},
     ]
 
-    for tc in tail_configs:
-        curve = BezierCurve3D(tc["p0"], tc["p1"], tc["p2"], tc["p3"])
-        u_tail = np.linspace(0.0, 1.0, tc["n_steps"])
-        c_pts = curve.evaluate(u_tail)
-        T, N, B = curve.compute_frames(u_tail)
-        
-        t_verts = []
-        t_uvs = []
-        for i in range(tc["n_steps"]):
-            pt = c_pts[i]
-            r_t = tc["r"] * (1.0 - 0.20 * (u_tail[i] ** 2))
-            n_v = N[i]
-            b_v = B[i]
-            for p in range(tc["n_prof"]):
-                phi = p * (2.0 * np.pi / tc["n_prof"])
-                disp = r_t * (np.cos(phi) * n_v + np.sin(phi) * b_v)
-                t_verts.append(pt + disp)
-                t_uvs.append([u_tail[i] * 6.0 + 0.1, p / float(tc["n_prof"])])
-                
-        t_verts = np.array(t_verts, dtype=np.float64)
-        t_uvs = np.array(t_uvs, dtype=np.float64)
-        t_faces = []
-        for i in range(tc["n_steps"] - 1):
-            for p in range(tc["n_prof"]):
-                p_next = (p + 1) % tc["n_prof"]
-                p0 = i * tc["n_prof"] + p
-                p1 = i * tc["n_prof"] + p_next
-                p2 = (i + 1) * tc["n_prof"] + p
-                p3 = (i + 1) * tc["n_prof"] + p_next
-                t_faces.append([p0, p1, p2])
-                t_faces.append([p1, p3, p2])
-                
+    def front_z(y: float) -> float:
+        if stems is not None:
+            return cz + hull_r(theta_front, y)
+        return knot_center[2]
+
+    for tc in tail_cfg:
+        ys = np.linspace(-0.628, tc["y_end"], tc["n_steps"])
+        pts = []
+        for k, y in enumerate(ys):
+            u = k / float(tc["n_steps"] - 1)
+            x = knot_center[0] + tc["dx0"] + (tc["dx3"] - tc["dx0"]) * (u ** 1.4)
+            z = front_z(y) + tc["r"] + 0.0035
+            pts.append(np.array([x, y, z]))
+        pts = np.array(pts)
+        t_verts, t_uvs, t_faces = _tube_along_polyline(
+            pts,
+            lambda i, r0=tc["r"], n=tc["n_steps"]: r0 * (1.0 - 0.20 * ((i / float(n - 1)) ** 2)),
+            10, 6.0)
         all_verts.append(t_verts)
-        all_faces.append(np.array(t_faces, dtype=np.int32) + v_offset)
+        all_faces.append(t_faces + v_offset)
         all_uvs.append(t_uvs)
         v_offset += len(t_verts)
 
@@ -701,6 +756,14 @@ class BouquetScene:
             stem = LilyStem(p0, p1, p2, p3, radius_base=0.034, radius_tip=0.022)
             self.stems.append(stem)
 
+        # Swept volume of the artisan raffia tie, so no leaf may be threaded
+        # through the binding. Margin covers the knot, loops and tails.
+        try:
+            tie_cx, tie_cz, tie_samples = measure_bundle_envelope(self.stems, -0.80, -0.575)
+        except Exception:
+            tie_cx = tie_cz = tie_samples = None
+        TIE_Y_LO, TIE_Y_HI, TIE_MARGIN = -0.800, -0.575, 0.020
+
         # Collision detection: guarantees leaves cradle blooms without piercing perianths or clipping into each other
         accepted_sample_pts: List[np.ndarray] = []
 
@@ -766,7 +829,22 @@ class BouquetScene:
                 if np.any(in_longitudinal & (d_perp <= r_envelope)):
                     return False
 
-            # 3. Leaf-to-Leaf Collision Detection (blades must not intersect)
+            # 3. Keep clear of the artisan raffia tie's swept volume
+            if tie_samples is not None:
+                in_band = (verts[:, 1] > TIE_Y_LO) & (verts[:, 1] < TIE_Y_HI)
+                if np.any(in_band):
+                    # re-sample finely: the coarse test mesh can bridge across
+                    # the tie between two of its own vertices
+                    fine, _, _, _ = leaf.generate_mesh(n_s=44, n_t=16)
+                    fband = (fine[:, 1] > TIE_Y_LO) & (fine[:, 1] < TIE_Y_HI)
+                    P = fine[fband]
+                    if len(P):
+                        th = np.arctan2(P[:, 2] - tie_cz, P[:, 0] - tie_cx)
+                        R = envelope_radius_many(tie_samples, tie_cx, tie_cz, th, P[:, 1])
+                        if np.any(np.hypot(P[:, 0] - tie_cx, P[:, 2] - tie_cz) < R + TIE_MARGIN):
+                            return False
+
+            # 4. Leaf-to-Leaf Collision Detection (blades must not intersect)
             blade_mask = s_coords > 0.18
             candidate_blade = verts[blade_mask]
             
@@ -1054,7 +1132,7 @@ class BouquetScene:
             vert_offset += len(l_verts)
 
         # 4. Generate Artisan Raffia Hand-Tie Binding
-        r_verts, r_faces, r_normals, r_uvs = generate_raffia_tie()
+        r_verts, r_faces, r_normals, r_uvs = generate_raffia_tie(self.stems)
         all_verts.append(r_verts)
         all_faces.append(r_faces + vert_offset)
         all_normals.append(r_normals)

@@ -28,22 +28,22 @@ class StudioLighting:
         self.key = DirectionalLight(
             direction=normalize(np.array([-0.52, 0.72, 0.46])),
             color=np.array([1.00, 0.975, 0.940]),
-            intensity=1.60
+            intensity=1.45
         )
-        # 2. Fill light: soft cool ambient fill from lower-right
+        # 2. Fill light: soft cool fill from lower-right (fill:key ~ 0.43 for open shadows)
         self.fill = DirectionalLight(
             direction=normalize(np.array([0.60, 0.22, 0.76])),
-            color=np.array([0.86, 0.91, 1.00]),
-            intensity=0.32
+            color=np.array([0.88, 0.92, 1.00]),
+            intensity=0.62
         )
-        # 3. Rim / Back light: edge backlight from behind-above for petal and leaf translucency
+        # 3. Rim / Back light: gentle edge backlight (kept low so edges do not blow out)
         self.rim = DirectionalLight(
             direction=normalize(np.array([0.10, 0.80, -0.58])),
-            color=np.array([0.94, 0.96, 0.90]),
-            intensity=0.55
+            color=np.array([0.95, 0.96, 0.92]),
+            intensity=0.30
         )
         # Ambient color: refined chiaroscuro fill
-        self.ambient_radiance = np.array([0.048, 0.056, 0.048], dtype=np.float32)
+        self.ambient_radiance = np.array([0.075, 0.082, 0.075], dtype=np.float32)
 
     def shade_surface(
         self,
